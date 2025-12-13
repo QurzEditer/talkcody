@@ -47,13 +47,27 @@ export class ToolExecutor {
     this.dependencyAnalyzer = new DependencyAnalyzer();
   }
 
+  /** Maximum recursion depth for JSON parsing to prevent stack overflow from malicious input */
+  private static readonly MAX_JSON_PARSE_DEPTH = 10;
+
   /**
    * Parse nested JSON strings in object fields
    * Handles cases where LLM returns arrays/objects as JSON strings
+   * @param obj The object to parse
+   * @param depth Current recursion depth (used internally to prevent stack overflow)
    */
-  private parseNestedJsonStrings(obj: unknown): unknown {
+  private parseNestedJsonStrings(obj: unknown, depth = 0): unknown {
+    // Prevent stack overflow from deeply nested or malicious input
+    if (depth > ToolExecutor.MAX_JSON_PARSE_DEPTH) {
+      logger.warn('[ToolExecutor] Max JSON parse depth exceeded, returning object as-is', {
+        maxDepth: ToolExecutor.MAX_JSON_PARSE_DEPTH,
+        currentDepth: depth,
+      });
+      return obj;
+    }
+
     if (Array.isArray(obj)) {
-      return obj.map((item) => this.parseNestedJsonStrings(item));
+      return obj.map((item) => this.parseNestedJsonStrings(item, depth + 1));
     }
 
     if (typeof obj !== 'object' || obj === null) {
@@ -83,7 +97,7 @@ export class ToolExecutor {
           result[key] = value;
         }
       } else if (typeof value === 'object' && value !== null) {
-        result[key] = this.parseNestedJsonStrings(value);
+        result[key] = this.parseNestedJsonStrings(value, depth + 1);
       } else {
         result[key] = value;
       }
@@ -251,22 +265,22 @@ export class ToolExecutor {
     try {
       // Validate and normalize tool name to prevent API errors
       // Some AI models may return tool names with invalid characters (e.g., "bash Tool" instead of "bash")
-      let normalizedToolName = toolCall.toolName;
+      // NOTE: We use a local variable instead of mutating toolCall to avoid race conditions in concurrent execution
+      const originalToolName = toolCall.toolName;
+      let normalizedToolName = originalToolName;
 
-      if (!isValidToolName(toolCall.toolName)) {
+      if (!isValidToolName(originalToolName)) {
         logger.warn('[ToolExecutor] Invalid tool name detected, attempting normalization', {
-          originalToolName: toolCall.toolName,
+          originalToolName,
           toolCallId: toolCall.toolCallId,
         });
 
-        const normalized = normalizeToolName(toolCall.toolName);
+        const normalized = normalizeToolName(originalToolName);
 
         if (normalized) {
           normalizedToolName = normalized;
-          // Update the toolCall object with normalized name
-          toolCall.toolName = normalizedToolName;
           logger.info('[ToolExecutor] Successfully normalized tool name', {
-            originalToolName: toolCall.toolName,
+            originalToolName,
             normalizedToolName,
             toolCallId: toolCall.toolCallId,
           });
@@ -274,7 +288,7 @@ export class ToolExecutor {
           // If normalization fails, let it proceed with original name
           // The tool-not-found handler will provide better error messages
           logger.error('[ToolExecutor] Failed to normalize invalid tool name', {
-            originalToolName: toolCall.toolName,
+            originalToolName,
             toolCallId: toolCall.toolCallId,
           });
         }

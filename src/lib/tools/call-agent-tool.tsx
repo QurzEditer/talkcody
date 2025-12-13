@@ -3,6 +3,7 @@ import { CallAgentToolDoing } from '@/components/tools/call-agent-tool-doing';
 import { CallAgentToolResult } from '@/components/tools/call-agent-tool-result';
 import { createTool } from '@/lib/create-tool';
 import { generateId } from '@/lib/utils';
+import { getNestedAgentTimeoutMs } from '@/services/agents/agent-execution-config';
 import { agentRegistry } from '@/services/agents/agent-registry';
 import { previewSystemPrompt } from '@/services/prompt/preview';
 import { getValidatedWorkspaceRoot } from '@/services/workspace-root-service';
@@ -126,75 +127,84 @@ export const callAgent = createTool({
         hasToolCallId: !!_toolCallId,
       });
 
-      await new Promise<void>((resolve, reject) => {
-        llmService
-          .runAgentLoop(
-            {
-              messages,
-              model: resolvedModel,
-              systemPrompt,
-              tools: agent.tools,
-              suppressReasoning: true,
-            },
-            {
-              onChunk: (c) => {
-                fullText += c;
-              },
-              onComplete: (finalText) => {
-                logger.info(`callAgent: Agent ${agentId} completed successfully`);
-                fullText = finalText || fullText;
-                resolve();
-              },
-              onError: (error) => {
-                logger.error(`callAgent: Agent ${agentId} failed:`, error);
-                // Log additional error details for debugging
-                if (error instanceof Error) {
-                  logger.error(`callAgent: Error name: ${error.name}`);
-                  logger.error(`callAgent: Error message: ${error.message}`);
-                  if (error.message.includes('Load failed')) {
-                    logger.error(
-                      `callAgent: This appears to be a network/model loading issue. Check internet connection and API keys.`
-                    );
-                  }
-                }
-                reject(error);
-              },
-              onStatus: (_status) => {
-                // logger.info(
-                //   `callAgent: Agent ${agentId} status: ${status}`
-                // );
-              },
-              onToolMessage: (message: UIMessage) => {
-                // Use executionId as the key for storing nested tool messages
-                // executionId is either _toolCallId (if available) or a generated unique ID
-                try {
-                  logger.info('[callAgent] 📨 Adding nested tool message to store', {
-                    executionId,
-                    nestedMessageId: message.id,
-                    nestedToolName: message.toolName,
-                    nestedToolCallId: message.toolCallId,
-                    messageRole: message.role,
-                  });
+      // Run the agent loop with timeout protection to prevent infinite loops
+      const agentLoopPromise = llmService.runAgentLoop(
+        {
+          messages,
+          model: resolvedModel,
+          systemPrompt,
+          tools: agent.tools,
+          suppressReasoning: true,
+        },
+        {
+          onChunk: (c) => {
+            fullText += c;
+          },
+          onComplete: (finalText) => {
+            logger.info(`callAgent: Agent ${agentId} completed successfully`);
+            fullText = finalText || fullText;
+          },
+          onError: (error) => {
+            logger.error(`callAgent: Agent ${agentId} failed:`, error);
+            // Log additional error details for debugging
+            if (error instanceof Error) {
+              logger.error(`callAgent: Error name: ${error.name}`);
+              logger.error(`callAgent: Error message: ${error.message}`);
+              if (error.message.includes('Load failed')) {
+                logger.error(
+                  `callAgent: This appears to be a network/model loading issue. Check internet connection and API keys.`
+                );
+              }
+            }
+            // Re-throw the error to be caught by the outer try-catch
+            throw error;
+          },
+          onStatus: (_status) => {
+            // logger.info(
+            //   `callAgent: Agent ${agentId} status: ${status}`
+            // );
+          },
+          onToolMessage: (message: UIMessage) => {
+            // Use executionId as the key for storing nested tool messages
+            // executionId is either _toolCallId (if available) or a generated unique ID
+            try {
+              logger.info('[callAgent] 📨 Adding nested tool message to store', {
+                executionId,
+                nestedMessageId: message.id,
+                nestedToolName: message.toolName,
+                nestedToolCallId: message.toolCallId,
+                messageRole: message.role,
+              });
 
-                  // Add message to store using executionId as the parent key
-                  useNestedToolsStore.getState().addMessage(executionId, {
-                    ...message,
-                    parentToolCallId: executionId,
-                  });
+              // Add message to store using executionId as the parent key
+              useNestedToolsStore.getState().addMessage(executionId, {
+                ...message,
+                parentToolCallId: executionId,
+              });
 
-                  logger.info('[callAgent] ✅ Nested tool message added to store successfully');
-                } catch (error) {
-                  logger.error('[callAgent] ❌ Failed to add nested tool message:', error, {
-                    executionId,
-                    messageId: message.id,
-                  });
-                }
-              },
-            },
-            _abortController
-          )
-          .catch(reject);
+              logger.info('[callAgent] ✅ Nested tool message added to store successfully');
+            } catch (error) {
+              logger.error('[callAgent] ❌ Failed to add nested tool message:', error, {
+                executionId,
+                messageId: message.id,
+              });
+            }
+          },
+        },
+        _abortController
+      );
+
+      // Add timeout protection to prevent infinite loops
+      const timeoutMs = getNestedAgentTimeoutMs();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(
+            new Error(`Agent ${agentId} execution timed out after ${timeoutMs / 1000} seconds`)
+          );
+        }, timeoutMs);
       });
+
+      await Promise.race([agentLoopPromise, timeoutPromise]);
 
       return {
         task: task,

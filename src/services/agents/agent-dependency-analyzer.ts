@@ -4,8 +4,13 @@ import type { ToolSet } from 'ai';
 import { logger } from '@/lib/logger';
 import { getToolMetadata } from '@/lib/tools';
 import type { AgentRole, ExecutionPhase } from '@/types/agent';
+import { getMaxParallelSubagents, isParallelExecutionEnabled } from './agent-execution-config';
 import type { ToolCallInfo } from './tool-executor';
 
+/**
+ * @deprecated Use getMaxParallelSubagents() from agent-execution-config.ts instead.
+ * This export is kept for backward compatibility with existing tests.
+ */
 export const MAX_PARALLEL_SUBAGENTS = 5;
 
 /**
@@ -300,8 +305,8 @@ export class AgentDependencyAnalyzer {
       groups: [
         {
           id: 'read-group-all',
-          concurrent: true,
-          maxConcurrency: Math.min(MAX_PARALLEL_SUBAGENTS, informationGatheringAgents.length),
+          concurrent: isParallelExecutionEnabled(),
+          maxConcurrency: Math.min(getMaxParallelSubagents(), informationGatheringAgents.length),
           agentCalls: agentCalls,
           targetFiles: allTargets.length > 0 ? allTargets : undefined,
           reason: 'All read operations can run in parallel',
@@ -372,8 +377,8 @@ export class AgentDependencyAnalyzer {
 
         currentConcurrentGroup = {
           id: `${rolePrefix}-group-${++groupCounter}`,
-          concurrent: true,
-          maxConcurrency: MAX_PARALLEL_SUBAGENTS,
+          concurrent: isParallelExecutionEnabled(),
+          maxConcurrency: getMaxParallelSubagents(),
           agentCalls: [agentCall],
           targetFiles: hasTargets ? targets : undefined,
           reason,
@@ -398,6 +403,10 @@ export class AgentDependencyAnalyzer {
 
   /**
    * Check if there's a target conflict with the current group
+   * Detects:
+   * - Exact path matches (src/a.ts vs src/a.ts)
+   * - Directory containment (src/ vs src/utils/file.ts)
+   * - Parent-child relationships (src/utils/ vs src/utils/helper.ts)
    */
   private hasTargetConflict(currentGroup: AgentExecutionGroup | null, targets: string[]): boolean {
     if (!currentGroup?.concurrent || targets.length === 0) {
@@ -405,7 +414,36 @@ export class AgentDependencyAnalyzer {
     }
 
     const groupTargets = currentGroup.targetFiles || [];
-    return targets.some((target) => groupTargets.includes(target));
+    return targets.some((target) =>
+      groupTargets.some((groupTarget) => this.pathsConflict(target, groupTarget))
+    );
+  }
+
+  /**
+   * Check if two paths conflict (exact match or containment relationship)
+   */
+  private pathsConflict(path1: string, path2: string): boolean {
+    // Normalize paths: remove trailing slashes for consistent comparison
+    const normPath1 = path1.replace(/\/+$/, '');
+    const normPath2 = path2.replace(/\/+$/, '');
+
+    // Exact match
+    if (normPath1 === normPath2) {
+      return true;
+    }
+
+    // Check if one path contains the other (directory containment)
+    // path1 is parent of path2: src/ contains src/utils/file.ts
+    if (normPath2.startsWith(normPath1 + '/')) {
+      return true;
+    }
+
+    // path2 is parent of path1: src/utils/ contains file that path1 refers to
+    if (normPath1.startsWith(normPath2 + '/')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

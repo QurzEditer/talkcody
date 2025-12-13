@@ -112,12 +112,22 @@ export class LLMService {
     return getLocale(language);
   }
 
+  /**
+   * Run the agent loop with the given options and callbacks.
+   * @param options Agent loop configuration
+   * @param callbacks Event callbacks for streaming, completion, errors, etc.
+   * @param abortController Optional controller to abort the loop
+   * @param taskId Task ID for this execution. Priority: this parameter > constructor taskId.
+   *               Use 'nested' for nested agent calls to skip task-level operations.
+   */
   async runAgentLoop(
     options: AgentLoopOptions,
     callbacks: AgentLoopCallbacks,
     abortController?: AbortController,
     taskId?: string
   ): Promise<void> {
+    // Resolve effective taskId: method parameter takes precedence over constructor taskId
+    const effectiveTaskId = taskId ?? this.taskId;
     // biome-ignore lint/suspicious/noAsyncPromiseExecutor: Complex agent loop requires async Promise executor
     return new Promise<void>(async (resolve, reject) => {
       const {
@@ -153,7 +163,7 @@ export class LLMService {
         logger.info('Starting agent loop with model', {
           model,
           maxIterations: options.maxIterations,
-          taskId: taskId || 'nested',
+          taskId: effectiveTaskId || 'nested',
           inputMessageCount: inputMessages.length,
           agentId: agentId || 'default',
         });
@@ -161,9 +171,9 @@ export class LLMService {
         onStatus?.(t.LLMService.status.initializing);
 
         // Clear file changes from previous agent loop for this task
-        if (taskId && taskId !== 'nested') {
+        if (effectiveTaskId && effectiveTaskId !== 'nested') {
           const { useFileChangesStore } = await import('@/stores/file-changes-store');
-          useFileChangesStore.getState().clearConversation(taskId);
+          useFileChangesStore.getState().clearConversation(effectiveTaskId);
         }
 
         const providerStore = useProviderStore.getState();
@@ -448,7 +458,7 @@ export class LLMService {
                   }
 
                   // Update task usage for UI display
-                  if (usage && taskId && taskId !== 'nested') {
+                  if (usage && effectiveTaskId && effectiveTaskId !== 'nested') {
                     const inputTokens = usage.inputTokens || 0;
                     const outputTokens = usage.outputTokens || 0;
                     const cost = aiPricingService.calculateCost(model, {
@@ -457,7 +467,7 @@ export class LLMService {
                     });
                     useTaskStore
                       .getState()
-                      .updateTaskUsage(taskId, cost, inputTokens, outputTokens);
+                      .updateTaskUsage(effectiveTaskId, cost, inputTokens, outputTokens);
 
                     // Calculate and update context usage percentage
                     if (loopState.lastRequestTokens > 0) {
@@ -466,7 +476,7 @@ export class LLMService {
                         100,
                         (loopState.lastRequestTokens / maxContextTokens) * 100
                       );
-                      useTaskStore.getState().setContextUsage(taskId, contextUsage);
+                      useTaskStore.getState().setContextUsage(effectiveTaskId, contextUsage);
                     }
                   }
 

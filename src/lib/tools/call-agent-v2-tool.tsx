@@ -3,6 +3,7 @@ import { CallAgentToolDoing } from '@/components/tools/call-agent-tool-doing';
 import { CallAgentToolResult } from '@/components/tools/call-agent-tool-result';
 import { createTool } from '@/lib/create-tool';
 import { generateId } from '@/lib/utils';
+import { getNestedAgentTimeoutMs } from '@/services/agents/agent-execution-config';
 import { previewSystemPrompt } from '@/services/prompt/preview';
 import { getValidatedWorkspaceRoot } from '@/services/workspace-root-service';
 import { useNestedToolsStore } from '@/stores/nested-tools-store';
@@ -228,7 +229,8 @@ export const callAgentV2 = createTool({
       const { llmService } = await import('@/services/agents/llm-service');
       let fullText = '';
 
-      await llmService.runAgentLoop(
+      // Run the agent loop with timeout protection to prevent infinite loops
+      const agentLoopPromise = llmService.runAgentLoop(
         {
           messages,
           model: resolvedModel,
@@ -272,6 +274,18 @@ export const callAgentV2 = createTool({
         },
         _abortController
       );
+
+      // Add timeout protection to prevent infinite loops
+      const timeoutMs = getNestedAgentTimeoutMs();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(
+            new Error(`Agent ${agentId} execution timed out after ${timeoutMs / 1000} seconds`)
+          );
+        }, timeoutMs);
+      });
+
+      await Promise.race([agentLoopPromise, timeoutPromise]);
 
       if (_abortController?.signal.aborted) {
         addStatus('Aborted');

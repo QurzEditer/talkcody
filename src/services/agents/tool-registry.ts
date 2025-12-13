@@ -29,34 +29,53 @@ let registryCache: Record<
   { ref: unknown; label: string; isBeta?: boolean; badgeLabel?: string }
 > | null = null;
 
+// Promise-based lock to prevent concurrent loadAllTools() calls during cold start
+// This fixes the race condition where multiple concurrent getToolRegistry() calls
+// would all execute loadAllTools() before any of them could set registryCache
+let registryPromise: Promise<
+  Record<string, { ref: unknown; label: string; isBeta?: boolean; badgeLabel?: string }>
+> | null = null;
+
 /**
  * Get the tool registry (lazy-loaded and cached)
+ * Uses Promise-based locking to prevent race conditions during concurrent access
  */
 async function getToolRegistry(): Promise<
   Record<string, { ref: unknown; label: string; isBeta?: boolean; badgeLabel?: string }>
 > {
+  // Fast path: return cached result if available
   if (registryCache) {
     return registryCache;
   }
 
-  const tools = await loadAllTools();
-  const registry: Record<
-    string,
-    { ref: unknown; label: string; isBeta?: boolean; badgeLabel?: string }
-  > = {};
-
-  for (const [toolName, toolRef] of Object.entries(tools)) {
-    const metadata = getToolMetadata(toolName);
-    registry[toolName] = {
-      ref: toolRef,
-      label: getToolLabel(toolName),
-      isBeta: (toolRef as any)?.isBeta === true || metadata.isBeta === true,
-      badgeLabel: metadata.badgeLabel ?? (toolRef as any)?.badgeLabel,
-    };
+  // If a loading operation is already in progress, wait for it
+  if (registryPromise) {
+    return registryPromise;
   }
 
-  registryCache = registry;
-  return registry;
+  // Start loading and store the promise to prevent concurrent loads
+  registryPromise = (async () => {
+    const tools = await loadAllTools();
+    const registry: Record<
+      string,
+      { ref: unknown; label: string; isBeta?: boolean; badgeLabel?: string }
+    > = {};
+
+    for (const [toolName, toolRef] of Object.entries(tools)) {
+      const metadata = getToolMetadata(toolName);
+      registry[toolName] = {
+        ref: toolRef,
+        label: getToolLabel(toolName),
+        isBeta: (toolRef as any)?.isBeta === true || metadata.isBeta === true,
+        badgeLabel: metadata.badgeLabel ?? (toolRef as any)?.badgeLabel,
+      };
+    }
+
+    registryCache = registry;
+    return registry;
+  })();
+
+  return registryPromise;
 }
 
 /**

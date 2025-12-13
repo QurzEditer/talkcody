@@ -677,6 +677,88 @@ describe('AgentDependencyAnalyzer', () => {
       expect(plan.stages[0].groups.length).toBeGreaterThan(1);
     });
 
+    it('detects directory containment conflict - parent contains child', async () => {
+      const toolCalls: ToolCallInfo[] = [
+        {
+          toolCallId: 'agent-1',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/'] },
+        },
+        {
+          toolCallId: 'agent-2',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/utils/helper.ts'] },
+        },
+      ];
+
+      const plan = await analyzer.analyzeDependencies(toolCalls, mockTools);
+
+      // Should create separate groups due to directory containment
+      expect(plan.stages[0].groups.length).toBeGreaterThan(1);
+    });
+
+    it('detects directory containment conflict - child within parent', async () => {
+      const toolCalls: ToolCallInfo[] = [
+        {
+          toolCallId: 'agent-1',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/components/Button.tsx'] },
+        },
+        {
+          toolCallId: 'agent-2',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/components/'] },
+        },
+      ];
+
+      const plan = await analyzer.analyzeDependencies(toolCalls, mockTools);
+
+      // Should create separate groups due to directory containment
+      expect(plan.stages[0].groups.length).toBeGreaterThan(1);
+    });
+
+    it('allows parallel execution for non-overlapping directories', async () => {
+      const toolCalls: ToolCallInfo[] = [
+        {
+          toolCallId: 'agent-1',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/components/'] },
+        },
+        {
+          toolCallId: 'agent-2',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/services/'] },
+        },
+      ];
+
+      const plan = await analyzer.analyzeDependencies(toolCalls, mockTools);
+
+      // Should run in parallel - no containment conflict
+      expect(plan.stages[0].groups.length).toBe(1);
+      expect(plan.stages[0].groups[0].concurrent).toBe(true);
+      expect(plan.stages[0].groups[0].agentCalls).toHaveLength(2);
+    });
+
+    it('handles trailing slashes consistently', async () => {
+      const toolCalls: ToolCallInfo[] = [
+        {
+          toolCallId: 'agent-1',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/utils'] }, // no trailing slash
+        },
+        {
+          toolCallId: 'agent-2',
+          toolName: 'callAgentV2',
+          input: { agentId: 'coding', targets: ['src/utils/'] }, // with trailing slash
+        },
+      ];
+
+      const plan = await analyzer.analyzeDependencies(toolCalls, mockTools);
+
+      // Should detect as same path (conflict)
+      expect(plan.stages[0].groups.length).toBeGreaterThan(1);
+    });
+
     it('handles null or undefined targets gracefully', async () => {
       const toolCalls: ToolCallInfo[] = [
         {
