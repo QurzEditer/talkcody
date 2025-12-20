@@ -1,12 +1,12 @@
 import type { ModelMessage } from 'ai';
 import { logger } from '@/lib/logger';
-import { timedMethod } from '@/lib/timer';
 import {
   mergeConsecutiveAssistantMessages,
   removeOrphanedToolMessages,
 } from '@/lib/message-convert';
 import { validateAnthropicMessages } from '@/lib/message-validate';
 import { GEMINI_25_FLASH_LITE, getContextLength } from '@/lib/models';
+import { timedMethod } from '@/lib/timer';
 import type {
   AgentLoopCallbacks,
   AgentLoopOptions,
