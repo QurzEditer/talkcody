@@ -24,6 +24,8 @@ class TerminalService {
   private outputListener: UnlistenFn | null = null;
   private closeListener: UnlistenFn | null = null;
   private dataListeners: Map<string, { dispose: () => void }> = new Map();
+  // Buffer for outputs that arrive before session is created (race condition fix)
+  private pendingOutputs: Map<string, string[]> = new Map();
 
   async initialize(): Promise<void> {
     logger.info('Initializing Terminal Service');
@@ -73,6 +75,9 @@ class TerminalService {
       this.closeListener = null;
     }
 
+    // Clear pending outputs buffer
+    this.pendingOutputs.clear();
+
     // Kill all active sessions
     const store = useTerminalStore.getState();
     const sessions = Array.from(store.sessions.values());
@@ -109,6 +114,23 @@ class TerminalService {
 
       useTerminalStore.getState().addSession(session);
       logger.info('Terminal created', { sessionId: session.id, ptyId: session.ptyId });
+
+      // Flush any pending outputs that arrived before session was created (race condition fix for Windows)
+      const pendingData = this.pendingOutputs.get(result.pty_id);
+      if (pendingData && pendingData.length > 0) {
+        logger.info('Flushing pending outputs after session creation', {
+          ptyId: result.pty_id,
+          sessionId: session.id,
+          pendingChunks: pendingData.length,
+        });
+        // Process pending outputs after a short delay to ensure terminal is ready
+        setTimeout(() => {
+          for (const data of pendingData) {
+            this.handlePtyOutput(result.pty_id, data);
+          }
+        }, 50);
+        this.pendingOutputs.delete(result.pty_id);
+      }
 
       return session;
     } catch (error) {
@@ -231,7 +253,15 @@ class TerminalService {
     const session = Array.from(store.sessions.values()).find((s) => s.ptyId === ptyId);
 
     if (!session) {
-      // Silently ignore output for unknown PTYs - this can happen during cleanup
+      // Buffer early outputs that arrive before session is created (race condition fix for Windows)
+      const pending = this.pendingOutputs.get(ptyId) || [];
+      pending.push(data);
+      this.pendingOutputs.set(ptyId, pending);
+      logger.info('Buffered early PTY output (session not yet created)', {
+        ptyId,
+        dataLength: data.length,
+        totalPendingChunks: pending.length,
+      });
       return;
     }
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { terminalService } from './terminal-service';
 import { useTerminalStore } from '@/stores/terminal-store';
 import type { Terminal } from '@xterm/xterm';
+import { invoke } from '@tauri-apps/api/core';
 
 // Mock dependencies
 vi.mock('@tauri-apps/api/core', () => ({
@@ -20,11 +21,19 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
+vi.mock('@/stores/settings-store', () => ({
+  settingsManager: {
+    getTerminalShell: vi.fn(() => 'auto'),
+  },
+}));
+
 describe('TerminalService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset the terminal store
     useTerminalStore.getState().sessions.clear();
+    // Clear pending outputs
+    (terminalService as any).pendingOutputs.clear();
   });
 
   describe('getRecentCommands', () => {
@@ -226,6 +235,143 @@ describe('TerminalService', () => {
       // XTerm will handle the ANSI codes for display
       expect(mockTerminal.write).toHaveBeenCalledWith(bufferedData);
       expect(mockTerminal.write).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('pendingOutputs race condition fix', () => {
+    it('should buffer PTY output when session does not exist yet', () => {
+      const ptyId = 'pty-race-1';
+      const earlyOutput = 'PS C:\\Users\\test> ';
+
+      // Simulate PTY output arriving before session is created
+      // This happens on Windows where ConPTY emits data before invoke returns
+      (terminalService as any).handlePtyOutput(ptyId, earlyOutput);
+
+      // Verify output was buffered
+      const pendingOutputs = (terminalService as any).pendingOutputs;
+      expect(pendingOutputs.has(ptyId)).toBe(true);
+      expect(pendingOutputs.get(ptyId)).toEqual([earlyOutput]);
+    });
+
+    it('should buffer multiple early outputs in order', () => {
+      const ptyId = 'pty-race-2';
+      const output1 = 'First chunk';
+      const output2 = 'Second chunk';
+      const output3 = 'Third chunk';
+
+      // Simulate multiple PTY outputs arriving before session is created
+      (terminalService as any).handlePtyOutput(ptyId, output1);
+      (terminalService as any).handlePtyOutput(ptyId, output2);
+      (terminalService as any).handlePtyOutput(ptyId, output3);
+
+      // Verify all outputs were buffered in order
+      const pendingOutputs = (terminalService as any).pendingOutputs;
+      expect(pendingOutputs.get(ptyId)).toEqual([output1, output2, output3]);
+    });
+
+    it('should flush pending outputs after session creation', async () => {
+      const ptyId = 'pty-race-3';
+      const earlyOutput = 'Early output before session';
+
+      // Mock invoke to return a valid pty_id
+      (invoke as ReturnType<typeof vi.fn>).mockResolvedValue({ pty_id: ptyId });
+
+      // Simulate early PTY output
+      (terminalService as any).handlePtyOutput(ptyId, earlyOutput);
+
+      // Verify output is buffered
+      expect((terminalService as any).pendingOutputs.has(ptyId)).toBe(true);
+
+      // Create the terminal (this should trigger flush)
+      const session = await terminalService.createTerminal('/test/path');
+
+      // Pending outputs should be cleared immediately (moved to flush queue)
+      expect((terminalService as any).pendingOutputs.has(ptyId)).toBe(false);
+
+      // Wait for the delayed flush (setTimeout 50ms in the implementation + some buffer)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify the session buffer now contains the early output
+      const store = useTerminalStore.getState();
+      const updatedSession = store.getSession(session.id);
+      expect(updatedSession?.buffer).toContain(earlyOutput);
+    });
+
+    it('should handle normal output flow when session exists', () => {
+      const sessionId = 'test-session-normal';
+      const ptyId = 'pty-normal';
+      const normalOutput = 'Normal output after session exists';
+
+      // Create session first (normal flow)
+      useTerminalStore.getState().addSession({
+        id: sessionId,
+        ptyId: ptyId,
+        title: 'Test Terminal',
+        buffer: '',
+        isActive: true,
+        createdAt: new Date(),
+      });
+
+      // Simulate PTY output after session exists
+      (terminalService as any).handlePtyOutput(ptyId, normalOutput);
+
+      // Verify output was NOT buffered (went directly to session)
+      expect((terminalService as any).pendingOutputs.has(ptyId)).toBe(false);
+
+      // Verify output was appended to session buffer
+      const store = useTerminalStore.getState();
+      const session = store.getSession(sessionId);
+      expect(session?.buffer).toBe(normalOutput);
+    });
+
+    it('should clear pending outputs on cleanup', async () => {
+      const ptyId1 = 'pty-cleanup-1';
+      const ptyId2 = 'pty-cleanup-2';
+
+      // Buffer some early outputs
+      (terminalService as any).handlePtyOutput(ptyId1, 'Output 1');
+      (terminalService as any).handlePtyOutput(ptyId2, 'Output 2');
+
+      // Verify they are buffered
+      expect((terminalService as any).pendingOutputs.size).toBe(2);
+
+      // Call cleanup
+      await terminalService.cleanup();
+
+      // Verify pending outputs are cleared
+      expect((terminalService as any).pendingOutputs.size).toBe(0);
+    });
+
+    it('should handle Windows ConPTY 4-byte initial output scenario', async () => {
+      const ptyId = 'pty-windows-conpty';
+      // Simulate the 4-byte ConPTY initialization data
+      const conptyInitData = '\x00\x00\x00\x00';
+      const shellPrompt = 'PS C:\\> ';
+
+      // Mock invoke
+      (invoke as ReturnType<typeof vi.fn>).mockResolvedValue({ pty_id: ptyId });
+
+      // Simulate ConPTY sending initial bytes before invoke returns
+      (terminalService as any).handlePtyOutput(ptyId, conptyInitData);
+      (terminalService as any).handlePtyOutput(ptyId, shellPrompt);
+
+      // Both should be buffered
+      expect((terminalService as any).pendingOutputs.get(ptyId)).toEqual([
+        conptyInitData,
+        shellPrompt,
+      ]);
+
+      // Create terminal
+      const session = await terminalService.createTerminal('C:\\Users\\test');
+
+      // Wait for the delayed flush
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Verify both outputs were flushed to session buffer
+      const store = useTerminalStore.getState();
+      const updatedSession = store.getSession(session.id);
+      expect(updatedSession?.buffer).toContain(conptyInitData);
+      expect(updatedSession?.buffer).toContain(shellPrompt);
     });
   });
 });
