@@ -1,167 +1,236 @@
 /**
  * SKILL.md Parser
  *
- * Parses Claude Code compatible SKILL.md files with YAML frontmatter
+ * Parses SKILL.md files according to Agent Skills Specification
+ * https://agentskills.io/specification
  */
 
-import type { ParsedSkillMd, SkillMdFrontmatter } from '@/types/file-based-skill';
-import type { SkillContent } from '@/types/skill';
+import { logger } from '@/lib/logger';
+import type { AgentSkillFrontmatter } from '@/types/agent-skills-spec';
+import { AgentSkillValidator } from './agent-skill-validator';
 
 /**
- * Parse SKILL.md content
+ * Parsed SKILL.md structure
+ */
+export interface ParsedSkillMd {
+	frontmatter: AgentSkillFrontmatter;
+	content: string;
+}
+
+/**
+ * Parse options
+ */
+export interface ParseOptions {
+	validate?: boolean; // Run validation and throw on errors
+	logWarnings?: boolean; // Log validation warnings
+}
+
+/**
+ * SkillMdParser
  *
- * Expected format:
- * ---
- * name: Skill Name
- * description: Description here
- * version: 1.0.0
- * ---
- * # Markdown content here
+ * Parses and generates SKILL.md files per Agent Skills Specification
  */
 export class SkillMdParser {
-  /**
-   * Parse SKILL.md file content
-   */
-  static parse(content: string): ParsedSkillMd {
-    const trimmed = content.trim();
+	/**
+	 * Parse SKILL.md file content
+	 *
+	 * Expected format:
+	 * ---
+	 * name: skill-name
+	 * description: Description here
+	 * license: MIT
+	 * metadata:
+	 *   author: name
+	 *   version: "1.0"
+	 * ---
+	 * # Markdown content here
+	 */
+	static parse(content: string, options: ParseOptions = {}): ParsedSkillMd {
+		const trimmed = content.trim();
 
-    // Check for frontmatter delimiters
-    if (!trimmed.startsWith('---')) {
-      throw new Error('Invalid SKILL.md: Missing YAML frontmatter (must start with ---)');
-    }
+		if (!trimmed.startsWith('---')) {
+			throw new Error('Invalid SKILL.md: Missing YAML frontmatter (must start with ---)');
+		}
 
-    // Find the closing delimiter
-    const lines = trimmed.split('\n');
-    let frontmatterEndIndex = -1;
+		const lines = trimmed.split('\n');
+		let frontmatterEndIndex = -1;
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (line && line.trim() === '---') {
-        frontmatterEndIndex = i;
-        break;
-      }
-    }
+		// Find closing delimiter
+		for (let i = 1; i < lines.length; i++) {
+			if (lines[i]?.trim() === '---') {
+				frontmatterEndIndex = i;
+				break;
+			}
+		}
 
-    if (frontmatterEndIndex === -1) {
-      throw new Error('Invalid SKILL.md: Missing closing --- for YAML frontmatter');
-    }
+		if (frontmatterEndIndex === -1) {
+			throw new Error('Invalid SKILL.md: Missing closing --- for YAML frontmatter');
+		}
 
-    // Extract frontmatter YAML
-    const frontmatterLines = lines.slice(1, frontmatterEndIndex);
-    const frontmatterYaml = frontmatterLines.join('\n');
+		// Extract frontmatter YAML
+		const frontmatterLines = lines.slice(1, frontmatterEndIndex);
+		const frontmatterYaml = frontmatterLines.join('\n');
 
-    // Extract markdown content
-    const markdownLines = lines.slice(frontmatterEndIndex + 1);
-    const markdownContent = markdownLines.join('\n').trim();
+		// Extract markdown content
+		const markdownLines = lines.slice(frontmatterEndIndex + 1);
+		const markdownContent = markdownLines.join('\n').trim();
 
-    // Parse YAML frontmatter
-    const frontmatter = SkillMdParser.parseYamlFrontmatter(frontmatterYaml);
+		// Parse YAML frontmatter
+		const frontmatter = this.parseYaml(frontmatterYaml);
 
-    return {
-      frontmatter,
-      content: markdownContent,
-    };
-  }
+		// Validate if requested
+		if (options.validate) {
+			const validation = AgentSkillValidator.validate(frontmatter);
 
-  /**
-   * Parse YAML frontmatter
-   * Simple YAML parser for common skill frontmatter fields
-   */
-  private static parseYamlFrontmatter(yaml: string): SkillMdFrontmatter {
-    const result: Record<string, unknown> = {};
-    const lines = yaml.split('\n');
+			if (!validation.valid) {
+				const errorMsg = validation.errors.map((e) => `${e.field}: ${e.message}`).join('\n');
+				throw new Error(`Invalid SKILL.md frontmatter:\n${errorMsg}`);
+			}
 
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine || trimmedLine.startsWith('#')) {
-        continue; // Skip empty lines and comments
-      }
+			if (options.logWarnings && validation.warnings.length > 0) {
+				for (const warning of validation.warnings) {
+					logger.warn(`SKILL.md warning - ${warning.field}: ${warning.message}`);
+				}
+			}
+		}
 
-      // Match key: value pattern
-      const match = trimmedLine.match(/^([^:]+):\s*(.*)$/);
-      if (!match) {
-        continue;
-      }
+		return {
+			frontmatter: frontmatter as AgentSkillFrontmatter,
+			content: markdownContent,
+		};
+	}
 
-      const key = match[1]?.trim() || '';
-      const value = match[2]?.trim() || '';
+	/**
+	 * Parse YAML frontmatter
+	 *
+	 * This is a simple YAML parser that supports:
+	 * - Top-level key-value pairs
+	 * - Nested objects (for metadata field)
+	 * - String, boolean, number values
+	 * - Comments (lines starting with #)
+	 */
+	private static parseYaml(yaml: string): Partial<AgentSkillFrontmatter> {
+		const result: Record<string, unknown> = {};
+		const lines = yaml.split('\n');
+		let currentKey: string | null = null;
+		let currentObject: Record<string, string> | null = null;
 
-      // Parse value types
-      if (value === 'true') {
-        result[key] = true;
-      } else if (value === 'false') {
-        result[key] = false;
-      } else if (value.match(/^\d+$/)) {
-        result[key] = Number.parseInt(value, 10);
-      } else if (value.match(/^\d+\.\d+$/)) {
-        result[key] = Number.parseFloat(value);
-      } else if (value.startsWith('[') && value.endsWith(']')) {
-        // Simple array parsing: [item1, item2, item3]
-        const arrayContent = value.slice(1, -1);
-        result[key] = arrayContent.split(',').map((item) => item.trim());
-      } else {
-        // String value - remove quotes if present
-        result[key] = value.replace(/^["']|["']$/g, '');
-      }
-    }
+		for (const line of lines) {
+			const trimmed = line.trim();
 
-    // Validate required fields
-    if (!result.name || typeof result.name !== 'string') {
-      throw new Error('Invalid SKILL.md: Missing required field "name" in frontmatter');
-    }
+			// Skip empty lines and comments
+			if (!trimmed || trimmed.startsWith('#')) {
+				continue;
+			}
 
-    if (!result.description || typeof result.description !== 'string') {
-      throw new Error('Invalid SKILL.md: Missing required field "description" in frontmatter');
-    }
+			// Check for nested object start (e.g., "metadata:")
+			if (trimmed.endsWith(':') && !trimmed.includes(' ')) {
+				currentKey = trimmed.slice(0, -1);
+				currentObject = {};
+				result[currentKey] = currentObject;
+				continue;
+			}
 
-    return result as SkillMdFrontmatter;
-  }
+			// Nested property (indented with spaces)
+			if (line.startsWith('  ') && currentObject) {
+				const match = trimmed.match(/^([^:]+):\s*(.*)$/);
+				if (match) {
+					const key = match[1]?.trim() || '';
+					const value = match[2]?.trim().replace(/^["']|["']$/g, '') || '';
+					currentObject[key] = value;
+				}
+				continue;
+			}
 
-  /**
-   * Generate SKILL.md content from parsed data
-   */
-  static generate(parsed: ParsedSkillMd): string {
-    const frontmatterYaml = SkillMdParser.generateYamlFrontmatter(parsed.frontmatter);
+			// Top-level property - reset nested context
+			currentKey = null;
+			currentObject = null;
 
-    return ['---', frontmatterYaml, '---', '', parsed.content].join('\n');
-  }
+			const match = trimmed.match(/^([^:]+):\s*(.*)$/);
+			if (match) {
+				const key = match[1]?.trim() || '';
+				let value: unknown = match[2]?.trim() || '';
 
-  /**
-   * Generate YAML frontmatter from object
-   */
-  private static generateYamlFrontmatter(frontmatter: SkillMdFrontmatter): string {
-    const lines: string[] = [];
+				// Parse value types
+				if (value === 'true') {
+					value = true;
+				} else if (value === 'false') {
+					value = false;
+				} else if (typeof value === 'string') {
+					// Remove surrounding quotes
+					value = value.replace(/^["']|["']$/g, '');
+				}
 
-    for (const [key, value] of Object.entries(frontmatter)) {
-      if (value === undefined || value === null) {
-        continue;
-      }
+				result[key] = value;
+			}
+		}
 
-      if (Array.isArray(value)) {
-        // Array format: key: [item1, item2]
-        lines.push(`${key}: [${value.join(', ')}]`);
-      } else if (typeof value === 'boolean' || typeof value === 'number') {
-        lines.push(`${key}: ${value}`);
-      } else {
-        // String - no quotes needed for simple strings
-        lines.push(`${key}: ${value}`);
-      }
-    }
+		// Validate required fields
+		if (!result.name || typeof result.name !== 'string') {
+			throw new Error('Invalid SKILL.md: Missing required field "name" in frontmatter');
+		}
 
-    return lines.join('\n');
-  }
+		if (!result.description || typeof result.description !== 'string') {
+			throw new Error('Invalid SKILL.md: Missing required field "description" in frontmatter');
+		}
 
-  /**
-   * Create a default SKILL.md template
-   */
-  static createTemplate(name: string, description: string): string {
-    const frontmatter: SkillMdFrontmatter = {
-      name,
-      description,
-      version: '1.0.0',
-    };
+		return result;
+	}
 
-    const content = `# ${name}
+	/**
+	 * Generate SKILL.md content from frontmatter and content
+	 */
+	static generate(frontmatter: AgentSkillFrontmatter, content: string): string {
+		const yaml = this.generateYaml(frontmatter);
+		return `---\n${yaml}\n---\n\n${content}`;
+	}
+
+	/**
+	 * Generate YAML frontmatter from object
+	 */
+	private static generateYaml(frontmatter: AgentSkillFrontmatter): string {
+		const lines: string[] = [];
+
+		// Required fields first
+		lines.push(`name: ${frontmatter.name}`);
+		lines.push(`description: ${frontmatter.description}`);
+
+		// Optional fields
+		if (frontmatter.license) {
+			lines.push(`license: ${frontmatter.license}`);
+		}
+
+		if (frontmatter.compatibility) {
+			lines.push(`compatibility: ${frontmatter.compatibility}`);
+		}
+
+		if (frontmatter['allowed-tools']) {
+			lines.push(`allowed-tools: ${frontmatter['allowed-tools']}`);
+		}
+
+		// Metadata (nested object)
+		if (frontmatter.metadata && Object.keys(frontmatter.metadata).length > 0) {
+			lines.push('metadata:');
+			for (const [key, value] of Object.entries(frontmatter.metadata)) {
+				// Escape quotes in value
+				const escapedValue = value.replace(/"/g, '\\"');
+				lines.push(`  ${key}: "${escapedValue}"`);
+			}
+		}
+
+		return lines.join('\n');
+	}
+
+	/**
+	 * Create a default SKILL.md template
+	 */
+	static createTemplate(name: string, description: string): string {
+		const frontmatter: AgentSkillFrontmatter = {
+			name,
+			description,
+		};
+
+		const content = `# ${name}
 
 ${description}
 
@@ -174,107 +243,28 @@ This skill provides domain-specific knowledge and best practices.
 Add your instructions here for how the AI should use this skill.
 `;
 
-    return SkillMdParser.generate({ frontmatter, content });
-  }
+		return this.generate(frontmatter, content);
+	}
 
-  /**
-   * Create SKILL.md from user-provided content
-   */
-  static createSkillMdFromContent(
-    name: string,
-    description: string,
-    skillContent?: SkillContent,
-    category?: string
-  ): string {
-    const frontmatter: SkillMdFrontmatter = {
-      name,
-      description,
-      version: '1.0.0',
-      category,
-    };
+	/**
+	 * Create SKILL.md with custom frontmatter and content
+	 */
+	static create(params: {
+		name: string;
+		description: string;
+		content: string;
+		license?: string;
+		compatibility?: string;
+		metadata?: Record<string, string>;
+	}): string {
+		const frontmatter: AgentSkillFrontmatter = {
+			name: params.name,
+			description: params.description,
+			license: params.license,
+			compatibility: params.compatibility,
+			metadata: params.metadata,
+		};
 
-    // If no content provided, use default template
-    if (!skillContent) {
-      const defaultContent = `# ${name}
-
-${description}
-
-## Usage
-
-This skill provides domain-specific knowledge and best practices.
-
-## Instructions
-
-Add your instructions here for how the AI should use this skill.
-`;
-      return SkillMdParser.generate({ frontmatter, content: defaultContent });
-    }
-
-    // Build content from SkillContent fields
-    const sections: string[] = [];
-
-    // Header
-    sections.push(`# ${name}`);
-    sections.push('');
-    sections.push(description);
-    sections.push('');
-
-    // System Prompt Fragment (Domain Knowledge)
-    if (skillContent.systemPromptFragment?.trim()) {
-      sections.push('## Domain Knowledge');
-      sections.push('');
-      sections.push(skillContent.systemPromptFragment.trim());
-      sections.push('');
-    }
-
-    // Workflow Rules
-    if (skillContent.workflowRules?.trim()) {
-      sections.push('## Workflow Rules');
-      sections.push('');
-      sections.push(skillContent.workflowRules.trim());
-      sections.push('');
-    }
-
-    // Documentation
-    if (skillContent.documentation && skillContent.documentation.length > 0) {
-      sections.push('## Documentation');
-      sections.push('');
-
-      for (const doc of skillContent.documentation) {
-        sections.push(`### ${doc.title}`);
-        sections.push('');
-
-        if (doc.type === 'inline' && doc.content) {
-          sections.push(doc.content);
-        } else if (doc.type === 'file' && doc.filePath) {
-          sections.push(`**File**: \`${doc.filePath}\``);
-        } else if (doc.type === 'url' && doc.url) {
-          sections.push(`**URL**: [${doc.url}](${doc.url})`);
-        }
-
-        sections.push('');
-      }
-    }
-
-    // Scripts info (if any)
-    if (
-      skillContent.hasScripts &&
-      skillContent.scriptFiles &&
-      skillContent.scriptFiles.length > 0
-    ) {
-      sections.push('## Available Scripts');
-      sections.push('');
-      sections.push('This skill includes the following executable scripts:');
-      sections.push('');
-
-      for (const scriptFile of skillContent.scriptFiles) {
-        sections.push(`- \`${scriptFile}\``);
-      }
-
-      sections.push('');
-    }
-
-    const content = sections.join('\n');
-    return SkillMdParser.generate({ frontmatter, content });
-  }
+		return this.generate(frontmatter, params.content);
+	}
 }

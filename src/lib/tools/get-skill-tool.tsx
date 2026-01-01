@@ -5,9 +5,6 @@ import { createTool } from '@/lib/create-tool';
 import { logger } from '@/lib/logger';
 import { getFileBasedSkillService } from '@/services/skills/file-based-skill-service';
 
-/**
- * Helper function to infer script type from filename
- */
 function inferScriptType(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase();
   switch (ext) {

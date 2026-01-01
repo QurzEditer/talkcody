@@ -186,11 +186,23 @@ export const callAgent = createTool({
       const timeoutMs = getNestedAgentTimeoutMs();
       let idleTimer: ReturnType<typeof setTimeout> | undefined;
       let timeoutReject: ((reason?: any) => void) | undefined;
+      let isTimeoutPaused = false;
+
+      // Tools that require user interaction and should pause timeout
+      const userInteractionTools = new Set(['exitPlanMode', 'askUserQuestions']);
+      const activeUserInteractionTools = new Set<string>();
 
       const resetIdleTimer = () => {
         if (idleTimer) clearTimeout(idleTimer);
+
+        // Don't start timeout if waiting for user interaction
+        if (isTimeoutPaused) {
+          logger.info(`[callAgent] Timeout paused - waiting for user interaction`, { agentId });
+          return;
+        }
+
         idleTimer = setTimeout(() => {
-          if (timeoutReject) {
+          if (timeoutReject && !isTimeoutPaused) {
             timeoutReject(
               new Error(
                 `Agent ${agentId} execution timed out due to inactivity after ${
@@ -246,7 +258,36 @@ export const callAgent = createTool({
                 addStatus(status);
               },
               onToolMessage: (message: UIMessage) => {
-                resetIdleTimer();
+                // Check if this is a user interaction tool
+                const toolName = message.toolName;
+
+                // Tool call started
+                if (
+                  toolName &&
+                  userInteractionTools.has(toolName) &&
+                  message.role === 'assistant'
+                ) {
+                  activeUserInteractionTools.add(toolName);
+                  isTimeoutPaused = true;
+                  if (idleTimer) clearTimeout(idleTimer);
+                  logger.info(`[callAgent] Timeout paused for user interaction tool: ${toolName}`, {
+                    agentId,
+                  });
+                }
+
+                // Tool call completed
+                if (toolName && userInteractionTools.has(toolName) && message.role === 'tool') {
+                  activeUserInteractionTools.delete(toolName);
+                  if (activeUserInteractionTools.size === 0) {
+                    isTimeoutPaused = false;
+                    logger.info(`[callAgent] Timeout resumed after user interaction`, { agentId });
+                    resetIdleTimer(); // Resume timeout
+                  }
+                } else {
+                  // For non-user-interaction tools, always reset timer
+                  resetIdleTimer();
+                }
+
                 try {
                   addNestedMessage(message);
                 } catch (error) {
