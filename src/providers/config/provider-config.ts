@@ -117,6 +117,24 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
       }),
   },
 
+  zai: {
+    id: 'zai',
+    name: 'Z.AI',
+    apiKeyName: 'ZAI_API_KEY',
+    baseUrl: 'https://api.z.ai/api/paas/v4/',
+    required: false,
+    type: 'openai-compatible',
+    supportsCodingPlan: true,
+    codingPlanBaseUrl: ' https://api.z.ai/api/coding/paas/v4',
+    createProvider: (apiKey: string, baseUrl?: string) =>
+      createOpenAICompatible({
+        apiKey,
+        name: 'zai',
+        baseURL: baseUrl || 'https://api.z.ai/api/paas/v4/',
+        fetch: streamFetch as typeof fetch,
+      }),
+  },
+
   openRouter: {
     id: 'openRouter',
     name: 'OpenRouter',
@@ -230,6 +248,21 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
         apiKey,
         name: 'moonshot',
         baseURL: 'https://api.moonshot.cn/v1',
+        fetch: streamFetch as typeof fetch,
+      }),
+  },
+
+  opencode: {
+    id: 'opencode',
+    name: 'OpenCode Zen',
+    apiKeyName: 'OPENCODE_API_KEY',
+    required: false,
+    type: 'openai-compatible',
+    createProvider: (apiKey: string) =>
+      createOpenAICompatible({
+        apiKey,
+        name: 'opencode',
+        baseURL: 'https://opencode.ai/zen/v1',
         fetch: streamFetch as typeof fetch,
       }),
   },

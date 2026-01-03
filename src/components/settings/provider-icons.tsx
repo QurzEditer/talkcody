@@ -48,11 +48,11 @@ export const PROVIDER_ICONS: Record<string, ComponentType<IconProps>> = {
   openRouter: createImageIcon('/icons/providers/openrouter.svg', 'OpenRouter'),
   tavily: createImageIcon('/icons/providers/tavily.svg', 'Tavily'),
   qwen_code: createImageIcon('/icons/providers/qwen.svg', 'Qwen Code'),
-
-  // Providers with downloaded favicon images
   serper: createImageIcon('/icons/providers/serpser.jpeg', 'Serper'),
   zhipu: createImageIcon('/icons/providers/zhipu.png', 'Zhipu AI'),
   github_copilot: createImageIcon('/icons/providers/github-copilot.svg', 'GitHub Copilot', true),
+  zai: createImageIcon('/icons/providers/zai.svg', 'ZAI', true),
+  opencode: createImageIcon('/icons/providers/opencode.svg', 'OpenCode Zen', true),
 };
 
 // Provider icon component

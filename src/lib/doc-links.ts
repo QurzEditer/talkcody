@@ -56,6 +56,8 @@ export function getDocLinks() {
       elevenlabs: `${BASE_URL}/configuration/api-keys#eleven-labs`,
       moonshot: `${BASE_URL}/configuration/api-keys#moonshot`,
       serper: `${BASE_URL}/configuration/api-keys#serper`,
+      zai: `${BASE_URL}/configuration/api-keys#zai`,
+      opencode: `${BASE_URL}/configuration/api-keys#opencode-zen`,
     },
 
     // Introduction

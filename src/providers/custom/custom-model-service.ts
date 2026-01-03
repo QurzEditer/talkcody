@@ -31,12 +31,16 @@ const PROVIDER_MODELS_ENDPOINTS: Record<string, string | null> = {
   lmstudio: 'http://127.0.0.1:1234/v1/models',
   openRouter: 'https://openrouter.ai/api/v1/models',
   zhipu: 'https://open.bigmodel.cn/api/paas/v4/models',
+  zai: 'https://api.z.ai/api/paas/v4/models',
   MiniMax: null, // MiniMax doesn't support /v1/models endpoint
   deepseek: 'https://api.deepseek.com/v1/models',
   anthropic: 'https://api.anthropic.com/v1/models',
   google: 'https://generativelanguage.googleapis.com/v1beta/models', // API key as query param
   aiGateway: 'https://ai-gateway.vercel.sh/v1/models',
   moonshot: 'https://api.moonshot.cn/v1/models',
+  opencode: 'https://opencode.ai/zen/v1/models',
+  github_copilot: 'https://api.githubcopilot.com/models',
+  qwen_code: 'https://dashscope.aliyuncs.com/compatible-mode/v1/models',
   // Non-AI providers, no need to test
   tavily: null,
   serper: null,
