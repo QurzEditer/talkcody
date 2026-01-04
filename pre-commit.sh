@@ -12,8 +12,8 @@ if git diff --cached --name-only | grep -E '\.rs$' > /dev/null; then
   cargo_exit_code=$?
   cd ..
   
-  # Stage any formatting changes
-  git add -u
+  # Only stage the Rust files that were changed by cargo fmt
+  git add -u src-tauri/
   
   if [ $cargo_exit_code -ne 0 ]; then
     echo "Error: cargo fmt failed"
@@ -21,13 +21,26 @@ if git diff --cached --name-only | grep -E '\.rs$' > /dev/null; then
   fi
 fi
 
+# Get list of currently staged files before running Biome
+staged_before=$(git diff --cached --name-only | sort)
+
 # Run Biome check with auto-fix (includes formatting and safe fixes like import sorting)
 echo "Running Biome check with auto-fix..."
 output=$(npx biome check --write --staged 2>&1)
 exit_code=$?
 
-# Stage fixed files
-git add -u
+# Get list of staged files after running Biome
+staged_after=$(git diff --cached --name-only | sort)
+
+# Only stage files that were previously staged and potentially modified by Biome
+if [ -n "$staged_before" ]; then
+  # Add only the files that were already staged
+  echo "$staged_before" | while read -r file; do
+    if [ -f "$file" ]; then
+      git add "$file"
+    fi
+  done
+fi
 
 if [ $exit_code -eq 0 ]; then
   # If Rust files were formatted but Biome had no changes, still exit 0
