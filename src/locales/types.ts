@@ -148,6 +148,15 @@ export interface LocaleDefinition {
       currentModel: string;
       noModels: string;
     };
+    autoApproveEdits: {
+      title: string;
+      description: string;
+      enabled: string;
+      disabled: string;
+      enabledTooltip: string;
+      disabledTooltip: string;
+      toggleFailed: string;
+    };
     toolbar: {
       model: string;
       planMode: string;

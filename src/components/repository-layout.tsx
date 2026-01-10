@@ -1,7 +1,6 @@
 import { Folder, ListTodo, Maximize2, Minimize2, Plus, Search } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -183,12 +182,23 @@ export function RepositoryLayout() {
     message: string;
   } | null>(null);
 
+  const normalizedTaskSearch = taskSearchQuery.trim().toLowerCase();
+
   // Filter tasks based on search query and current project
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch = task.title.toLowerCase().includes(taskSearchQuery.toLowerCase());
-    const matchesProject = currentProjectId ? task.project_id === currentProjectId : true;
-    return matchesSearch && matchesProject;
-  });
+  const filteredTasks = useMemo(() => {
+    const hasSearch = normalizedTaskSearch.length > 0;
+    const hasProject = Boolean(currentProjectId);
+
+    if (!hasSearch && !hasProject) {
+      return tasks;
+    }
+
+    return tasks.filter((task) => {
+      const matchesSearch = !hasSearch || task.title.toLowerCase().includes(normalizedTaskSearch);
+      const matchesProject = !hasProject || task.project_id === currentProjectId;
+      return matchesSearch && matchesProject;
+    });
+  }, [tasks, normalizedTaskSearch, currentProjectId]);
 
   // Worktree conflict handling
   const {

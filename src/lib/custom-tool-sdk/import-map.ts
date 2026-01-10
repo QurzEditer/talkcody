@@ -80,7 +80,6 @@ export async function resolveCustomToolModule(alias: string, baseDir?: string): 
       throw new Error(`Relative import requires base directory: ${alias}`);
     }
 
-    // Resolve absolute path
     const resolvedPath = await resolveRelativePath(baseDir, alias);
     const cacheKey = `file:${resolvedPath}`;
 
@@ -88,10 +87,8 @@ export async function resolveCustomToolModule(alias: string, baseDir?: string): 
       return moduleCache.get(cacheKey);
     }
 
-    // Load and compile the file
     const module = await loadAndCompileFile(resolvedPath);
     moduleCache.set(cacheKey, module);
-    // Also cache under original alias for consistency
     moduleCache.set(alias, module);
     return module;
   }
@@ -259,14 +256,39 @@ export function getPlaygroundCacheSize(playgroundId?: string): number {
   return playgroundModuleCache.size;
 }
 
+const RELATIVE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'] as const;
+
+function hasKnownExtension(filePath: string): boolean {
+  return RELATIVE_EXTENSIONS.some((ext) => filePath.endsWith(ext));
+}
+
+function buildRelativeCandidates(resolvedPath: string): string[] {
+  if (hasKnownExtension(resolvedPath)) {
+    return [resolvedPath];
+  }
+
+  const withExtensions = RELATIVE_EXTENSIONS.map((ext) => `${resolvedPath}${ext}`);
+  const withIndex = RELATIVE_EXTENSIONS.map((ext) => `${resolvedPath}/index${ext}`);
+  return [...withExtensions, ...withIndex];
+}
+
 async function resolveRelativePath(baseDir: string, specifier: string): Promise<string> {
-  // Dynamically import Tauri path API
   const { join, normalize } = await import('@tauri-apps/api/path');
-  return await normalize(await join(baseDir, specifier));
+  const { exists } = await import('@tauri-apps/plugin-fs');
+
+  const resolvedPath = await normalize(await join(baseDir, specifier));
+  const candidates = buildRelativeCandidates(resolvedPath);
+
+  for (const candidate of candidates) {
+    if (await exists(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`File not found: ${resolvedPath}`);
 }
 
 async function loadAndCompileFile(filePath: string): Promise<unknown> {
-  // Dynamically import dependencies
   const { readTextFile, exists } = await import('@tauri-apps/plugin-fs');
   const { compileCustomTool, createCustomToolModuleUrl, resolveCustomToolDefinition } =
     await import('@/services/tools/custom-tool-compiler');
@@ -275,15 +297,12 @@ async function loadAndCompileFile(filePath: string): Promise<unknown> {
     throw new Error(`File not found: ${filePath}`);
   }
 
-  // Extract filename and directory
   const { basename, dirname } = await import('@tauri-apps/api/path');
   const filename = await basename(filePath);
   const fileDir = await dirname(filePath);
 
-  // Read and compile file
   const sourceCode = await readTextFile(filePath);
   const compiled = await compileCustomTool(sourceCode, { filename });
-  // Pass file directory as baseDir for relative imports within this file
   const moduleUrl = await createCustomToolModuleUrl(compiled, filename, fileDir);
   const definition = await resolveCustomToolDefinition(moduleUrl);
 

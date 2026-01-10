@@ -151,6 +151,15 @@ const zh: LocaleDefinition = {
       currentModel: '当前模型',
       noModels: '无可用模型，请在设置中配置 API 密钥。',
     },
+    autoApproveEdits: {
+      title: '自动批准编辑',
+      description: '启用后，文件编辑将自动应用，无需人工审核',
+      enabled: '已启用',
+      disabled: '已禁用',
+      enabledTooltip: '自动批准：AI 将直接应用编辑，无需询问批准',
+      disabledTooltip: '人工审核：AI 将在应用编辑前请求批准',
+      toggleFailed: '更新自动批准设置失败',
+    },
     toolbar: {
       model: '模型',
       planMode: '计划模式',

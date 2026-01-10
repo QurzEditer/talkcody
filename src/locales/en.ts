@@ -156,6 +156,15 @@ const en: LocaleDefinition = {
       currentModel: 'Current model',
       noModels: 'No models available. Please configure API keys in settings.',
     },
+    autoApproveEdits: {
+      title: 'Auto-approve edits',
+      description: 'When enabled, file edits will be applied automatically without review',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      enabledTooltip: 'Auto-approve: AI will apply edits without asking for approval',
+      disabledTooltip: 'Manual review: AI will ask for approval before applying edits',
+      toggleFailed: 'Failed to update auto-approve setting',
+    },
     toolbar: {
       model: 'Model',
       planMode: 'Plan Mode',
