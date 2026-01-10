@@ -22,7 +22,7 @@ export function UsageDashboardPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="claude" className="w-full">
+        <Tabs defaultValue="openai" className="w-full">
           <TabsList className="grid w-full max-w-2xl grid-cols-4">
             <TabsTrigger value="openai">OpenAI</TabsTrigger>
             <TabsTrigger value="github-copilot">GitHub Copilot</TabsTrigger>
