@@ -21,7 +21,7 @@ export class KeepAwakeService {
   private static instance: KeepAwakeService | null = null;
   private refCount = 0;
   private isPreventing = false;
-  private releaseTimeout: number | null = null;
+  private releaseTimeout: ReturnType<typeof setTimeout> | null = null;
   private releasePromise: Promise<boolean> | null = null;
   private releaseResolve: ((value: boolean) => void) | null = null;
   private currentPlatform: string | null = null;
