@@ -202,6 +202,55 @@ export async function getBuiltInCommands(): Promise<Command[]> {
       createdAt: new Date(),
       updatedAt: new Date(),
     },
+
+    // /create-skill - Create a custom local skill
+    {
+      id: 'create-skill',
+      name: 'create-skill',
+      description: 'Create a custom local skill (SKILL.md)',
+      category: CommandCategory.PROJECT,
+      type: CommandType.AI_PROMPT,
+      parameters: [
+        {
+          name: 'name',
+          description: 'Skill name or short description',
+          required: false,
+          type: 'string',
+        },
+      ],
+      parametersSchema: z.object({
+        name: z.string().optional(),
+        _raw: z.string().optional(),
+      }),
+      executor: async (args, _context) => {
+        const skillHint = args.name || args._raw || '';
+
+        let aiMessage =
+          'Please help create a custom local TalkCody skill. Gather requirements (name, purpose, description, category/tags, system prompt fragment, workflow rules, documentation, compatibility/license) and generate a valid SKILL.md following the Agent Skills Specification. ' +
+          'The skill should be saved under the local skills directory (use AgentSkillService.getSkillsDirPath()) as a new folder containing SKILL.md, and optional references/scripts/assets directories if needed. ' +
+          'Ensure the skill name is kebab-case and matches the directory name. Do not overwrite existing skills without confirmation. ' +
+          'Provide bilingual (EN/ZH) user-visible text when possible. ';
+
+        if (skillHint) {
+          aiMessage += `The skill request is: ${skillHint}. `;
+        }
+
+        return {
+          success: true,
+          message: 'Custom skill creation started',
+          continueProcessing: true,
+          aiMessage,
+        };
+      },
+      isBuiltIn: true,
+      enabled: true,
+      icon: 'Sparkles',
+      preferredAgentId: 'create-skill',
+      aliases: ['new-skill', 'skill'],
+      examples: ['/create-skill', '/create-skill design system coach'],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
   ];
 
   return commands;
@@ -210,9 +259,7 @@ export async function getBuiltInCommands(): Promise<Command[]> {
 /**
  * Execute compact command logic directly
  */
-async function executeCompactCommand(
-  context: CommandContext
-): Promise<{ success: boolean; message: string; error?: string }> {
+async function executeCompactCommand(context: CommandContext) {
   const { taskId } = context;
 
   if (!taskId) {
@@ -220,6 +267,7 @@ async function executeCompactCommand(
       success: false,
       message: 'No active task - cannot compact context',
       error: 'No active task - cannot compact context',
+      continueProcessing: false,
     };
   }
 
@@ -229,5 +277,15 @@ async function executeCompactCommand(
     success: result.success,
     message: result.message,
     error: result.error,
+    continueProcessing: false,
+    data: {
+      type: 'compaction',
+      stats: {
+        originalMessageCount: result.originalMessageCount,
+        compressedMessageCount: result.compressedMessageCount,
+        reductionPercent: result.reductionPercent,
+        compressionRatio: result.compressionRatio,
+      },
+    },
   };
 }

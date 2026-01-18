@@ -124,6 +124,27 @@ export interface LocaleDefinition {
     };
     commands: {
       hint: string;
+      unknownCommand: (name: string) => string;
+      invalidCommand: string;
+    };
+    compaction: {
+      dialogTitle: string;
+      dialogDescription: string;
+      compacting: string;
+      stats: {
+        originalMessages: string;
+        compactedMessages: string;
+        reductionPercent: string;
+        compressionRatio: string;
+      };
+      errors: {
+        noTask: string;
+        taskNotFound: string;
+        noMessages: string;
+        noChange: string;
+        failed: (message: string) => string;
+      };
+      successMessage: (count: number, reduction: number) => string;
     };
     tools: {
       title: string;

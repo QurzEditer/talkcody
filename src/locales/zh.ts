@@ -126,6 +126,28 @@ const zh: LocaleDefinition = {
     },
     commands: {
       hint: '/ 命令',
+      unknownCommand: (name) => `未知命令：${name}`,
+      invalidCommand: '命令无效',
+    },
+    compaction: {
+      dialogTitle: '上下文压缩',
+      dialogDescription: '消息历史已压缩，不会发送新的对话消息。',
+      compacting: '正在压缩上下文...',
+      stats: {
+        originalMessages: '原始消息数',
+        compactedMessages: '压缩后消息数',
+        reductionPercent: '缩减比例',
+        compressionRatio: '压缩比',
+      },
+      errors: {
+        noTask: '没有激活的任务，无法压缩上下文',
+        taskNotFound: '未找到任务',
+        noMessages: '没有可压缩的消息',
+        noChange: '无需压缩，当前上下文已足够紧凑',
+        failed: (message) => `压缩上下文失败：${message}`,
+      },
+      successMessage: (count, reduction) =>
+        `上下文压缩成功。已压缩到 ${count} 条消息（缩减 ${reduction}%）`,
     },
     tools: {
       title: 'Agent 工具',

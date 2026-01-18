@@ -13,23 +13,27 @@ vi.mock('./keep-awake-service', () => ({
   },
 }));
 
-const executionState = {
-  runningCount: 0,
-};
+const { executionState, listeners, mockExecutionStore } = vi.hoisted(() => {
+  const executionState = {
+    runningCount: 0,
+  };
 
-const listeners = new Set<() => void>();
+  const listeners = new Set<() => void>();
 
-const mockExecutionStore = {
-  getState: () => ({
-    getRunningCount: () => executionState.runningCount,
-  }),
-  subscribe: (listener: () => void) => {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  },
-};
+  const mockExecutionStore = {
+    getState: () => ({
+      getRunningCount: () => executionState.runningCount,
+    }),
+    subscribe: (listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+
+  return { executionState, listeners, mockExecutionStore };
+});
 
 vi.mock('@/stores/execution-store', () => ({
   useExecutionStore: mockExecutionStore,

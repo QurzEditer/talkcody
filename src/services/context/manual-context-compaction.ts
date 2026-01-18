@@ -4,9 +4,11 @@ import { convertMessages } from '@/lib/llm-utils';
 import { logger } from '@/lib/logger';
 import { convertToAnthropicFormat } from '@/lib/message-convert';
 import { generateId } from '@/lib/utils';
+import { getLocale, type SupportedLocale } from '@/locales';
 import { modelTypeService } from '@/providers/models/model-type-service';
 import { taskFileService } from '@/services/task-file-service';
 import { getEffectiveWorkspaceRoot } from '@/services/workspace-root-service';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useTaskStore } from '@/stores/task-store';
 import type { CompressionConfig, UIMessage } from '@/types/agent';
 import { ModelType } from '@/types/model-types';
@@ -18,6 +20,9 @@ export interface ManualCompactionResult {
   error?: string;
   compressedMessages?: UIMessage[];
   compressionRatio?: number;
+  originalMessageCount?: number;
+  compressedMessageCount?: number;
+  reductionPercent?: number;
 }
 
 interface BuildCompactionConfigInput {
@@ -36,6 +41,11 @@ function buildCompressionConfig({ config }: BuildCompactionConfigInput): Compres
     ...config,
     compressionModel: modelTypeService.resolveModelTypeSync(ModelType.MESSAGE_COMPACTION),
   };
+}
+
+function getCompactionLocale() {
+  const language = (useSettingsStore.getState().language || 'en') as SupportedLocale;
+  return getLocale(language);
 }
 
 function hasSystemMessage(messages: UIMessage[]): boolean {
@@ -131,11 +141,13 @@ function mapModelMessagesToUI(
 }
 
 export async function compactTaskContext(taskId: string): Promise<ManualCompactionResult> {
+  const t = getCompactionLocale();
+
   if (!taskId) {
     return {
       success: false,
-      message: 'No active task - cannot compact context',
-      error: 'No active task - cannot compact context',
+      message: t.Chat.compaction.errors.noTask,
+      error: t.Chat.compaction.errors.noTask,
     };
   }
 
@@ -146,8 +158,8 @@ export async function compactTaskContext(taskId: string): Promise<ManualCompacti
     if (!task) {
       return {
         success: false,
-        message: 'Task not found',
-        error: 'Task not found',
+        message: t.Chat.compaction.errors.taskNotFound,
+        error: t.Chat.compaction.errors.taskNotFound,
       };
     }
 
@@ -155,7 +167,8 @@ export async function compactTaskContext(taskId: string): Promise<ManualCompacti
     if (messages.length === 0) {
       return {
         success: false,
-        message: 'No messages to compact',
+        message: t.Chat.compaction.errors.noMessages,
+        error: t.Chat.compaction.errors.noMessages,
       };
     }
 
@@ -192,7 +205,8 @@ export async function compactTaskContext(taskId: string): Promise<ManualCompacti
     if (!compressionResult.compressedSummary && compressionResult.sections.length === 0) {
       return {
         success: false,
-        message: 'No compression needed - context is already compact',
+        message: t.Chat.compaction.errors.noChange,
+        error: t.Chat.compaction.errors.noChange,
       };
     }
 
@@ -213,22 +227,28 @@ export async function compactTaskContext(taskId: string): Promise<ManualCompacti
       JSON.stringify(data)
     );
 
-    const reduction = ((1 - compressionResult.compressionRatio) * 100).toFixed(1);
-    const resultMessage = `Context compacted successfully. Reduced to ${compressionResult.compressedMessageCount} messages (${reduction}% reduction)`;
+    const reductionPercent = Number(((1 - compressionResult.compressionRatio) * 100).toFixed(1));
+    const resultMessage = t.Chat.compaction.successMessage(
+      compressionResult.compressedMessageCount,
+      reductionPercent
+    );
 
     return {
       success: true,
       message: resultMessage,
       compressedMessages: uiMessages,
       compressionRatio: compressionResult.compressionRatio,
+      originalMessageCount: compressionResult.originalMessageCount,
+      compressedMessageCount: compressionResult.compressedMessageCount,
+      reductionPercent,
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('[manual-compaction] Failed to compact context:', error);
     return {
       success: false,
-      message: `Failed to compact context: ${errorMessage}`,
-      error: `Failed to compact context: ${errorMessage}`,
+      message: t.Chat.compaction.errors.failed(errorMessage),
+      error: t.Chat.compaction.errors.failed(errorMessage),
     };
   }
 }

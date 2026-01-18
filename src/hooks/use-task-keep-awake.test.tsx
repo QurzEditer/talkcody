@@ -5,23 +5,27 @@ import { renderHook } from '@testing-library/react';
 import { useTaskKeepAwake, useIsPreventingSleep } from './use-task-keep-awake';
 
 // Mock keep-awake manager
-const snapshot = {
-  isPreventing: false,
-  refCount: 0,
-  runningCount: 0,
-};
+const { snapshot, listeners, mockManager } = vi.hoisted(() => {
+  const snapshot = {
+    isPreventing: false,
+    refCount: 0,
+    runningCount: 0,
+  };
 
-const listeners = new Set<() => void>();
+  const listeners = new Set<() => void>();
 
-const mockManager = {
-  getSnapshot: vi.fn(() => snapshot),
-  subscribe: vi.fn((listener: () => void) => {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }),
-};
+  const mockManager = {
+    getSnapshot: vi.fn(() => snapshot),
+    subscribe: vi.fn((listener: () => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    }),
+  };
+
+  return { snapshot, listeners, mockManager };
+});
 
 vi.mock('@/services/keep-awake-manager', () => ({
   keepAwakeManager: mockManager,

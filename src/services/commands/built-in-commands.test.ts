@@ -36,4 +36,21 @@ describe('getBuiltInCommands', () => {
     expect(result?.aiMessage).toContain('src/services/agents');
     expect(result?.aiMessage).toContain('agent-registry');
   });
+
+  it('includes create-skill command with preferred agent and skill guidance', async () => {
+    const commands = await getBuiltInCommands();
+    const createSkill = commands.find((command) => command.id === 'create-skill');
+
+    expect(createSkill).toBeDefined();
+    expect(createSkill?.name).toBe('create-skill');
+    expect(createSkill?.type).toBe(CommandType.AI_PROMPT);
+    expect(createSkill?.preferredAgentId).toBe('create-skill');
+
+    const result = await createSkill?.executor({}, {} as any);
+    expect(result?.success).toBe(true);
+    expect(result?.continueProcessing).toBe(true);
+    expect(result?.aiMessage).toContain('custom local TalkCody skill');
+    expect(result?.aiMessage).toContain('SKILL.md');
+    expect(result?.aiMessage).toContain('AgentSkillService.getSkillsDirPath');
+  });
 });

@@ -130,6 +130,28 @@ const en: LocaleDefinition = {
     },
     commands: {
       hint: '/ for commands',
+      unknownCommand: (name) => `Unknown command: ${name}`,
+      invalidCommand: 'Invalid command',
+    },
+    compaction: {
+      dialogTitle: 'Context compaction',
+      dialogDescription: 'Your message history was compacted. No new chat message was sent.',
+      compacting: 'Compacting context...',
+      stats: {
+        originalMessages: 'Original messages',
+        compactedMessages: 'Compacted messages',
+        reductionPercent: 'Reduction',
+        compressionRatio: 'Compression ratio',
+      },
+      errors: {
+        noTask: 'No active task - cannot compact context',
+        taskNotFound: 'Task not found',
+        noMessages: 'No messages to compact',
+        noChange: 'No compression needed - context is already compact',
+        failed: (message) => `Failed to compact context: ${message}`,
+      },
+      successMessage: (count, reduction) =>
+        `Context compacted successfully. Reduced to ${count} messages (${reduction}% reduction)`,
     },
     tools: {
       title: 'Agent Tools',
