@@ -91,7 +91,6 @@ struct Payload {
 struct AppState {
     file_watcher: Mutex<Option<FileWatcher>>,
     window_registry: WindowRegistry,
-    keep_awake: keep_awake::KeepAwakeStateWrapper,
 }
 
 #[tauri::command]
@@ -632,8 +631,8 @@ pub fn run() {
         .manage(AppState {
             file_watcher: Mutex::new(None),
             window_registry: WindowRegistry::new(),
-            keep_awake: keep_awake::KeepAwakeStateWrapper::new(),
         })
+        .manage(keep_awake::KeepAwakeStateWrapper::new())
         .manage(AnalyticsState::new())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {

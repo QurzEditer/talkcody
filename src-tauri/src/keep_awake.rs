@@ -28,26 +28,6 @@ impl KeepAwakeStateWrapper {
             state: KeepAwakeState::new(),
         }
     }
-
-    pub fn inner(&self) -> &KeepAwakeState {
-        &self.state
-    }
-
-    pub fn acquire(&self) -> Result<bool, String> {
-        self.state.acquire()
-    }
-
-    pub fn release(&self) -> Result<bool, String> {
-        self.state.release()
-    }
-
-    pub fn ref_count(&self) -> u32 {
-        self.state.ref_count()
-    }
-
-    pub fn is_preventing_sleep(&self) -> bool {
-        self.state.is_preventing_sleep()
-    }
 }
 
 impl Default for KeepAwakeStateWrapper {
@@ -55,9 +35,6 @@ impl Default for KeepAwakeStateWrapper {
         Self::new()
     }
 }
-
-/// AppState re-export for lib.rs
-pub type AppStateKeepAwake = KeepAwakeStateWrapper;
 
 /// Keep awake state with reference counting
 ///
@@ -290,7 +267,7 @@ enum KeepAwakeProcess {
 #[tauri::command]
 pub fn keep_awake_acquire(state: State<KeepAwakeStateWrapper>) -> Result<bool, String> {
     log::info!("keep_awake_acquire called");
-    state.inner().state.acquire()
+    state.state.acquire()
 }
 
 /// Tauri command to release sleep prevention
@@ -301,19 +278,19 @@ pub fn keep_awake_acquire(state: State<KeepAwakeStateWrapper>) -> Result<bool, S
 #[tauri::command]
 pub fn keep_awake_release(state: State<KeepAwakeStateWrapper>) -> Result<bool, String> {
     log::info!("keep_awake_release called");
-    state.inner().state.release()
+    state.state.release()
 }
 
 /// Get current reference count (for debugging)
 #[tauri::command]
 pub fn keep_awake_get_ref_count(state: State<KeepAwakeStateWrapper>) -> Result<u32, String> {
-    Ok(state.inner().state.ref_count())
+    Ok(state.state.ref_count())
 }
 
 /// Check if sleep is currently being prevented
 #[tauri::command]
 pub fn keep_awake_is_preventing(state: State<KeepAwakeStateWrapper>) -> Result<bool, String> {
-    Ok(state.inner().state.is_preventing_sleep())
+    Ok(state.state.is_preventing_sleep())
 }
 
 #[cfg(test)]
