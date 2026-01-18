@@ -8,6 +8,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { useLocale } from '@/hooks/use-locale';
 import { logger } from '@/lib/logger';
 import { taskService } from '@/services/task-service';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useTaskStore } from '@/stores/task-store';
 import type { TaskSettings } from '@/types/task';
 
@@ -16,52 +17,36 @@ export function AutoApproveEditsButton() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const currentTaskId = useTaskStore((state) => state.currentTaskId);
+  const autoApproveGlobal = useSettingsStore((state) => state.auto_approve_edits_global);
+  const setAutoApproveGlobal = useSettingsStore((state) => state.setAutoApproveEditsGlobal);
 
-  // Load current task settings on mount and when task changes
   useEffect(() => {
-    if (!currentTaskId) {
-      setIsEnabled(false);
-      return;
-    }
-
-    const loadSettings = async () => {
-      try {
-        const settingsJson = await taskService.getTaskSettings(currentTaskId);
-        if (settingsJson) {
-          const settings: TaskSettings = JSON.parse(settingsJson);
-          setIsEnabled(settings.autoApproveEdits === true);
-        } else {
-          setIsEnabled(false);
-        }
-      } catch (error) {
-        logger.error('Failed to load task settings:', error);
-        setIsEnabled(false);
-      }
-    };
-
-    loadSettings();
-  }, [currentTaskId]);
+    setIsEnabled(autoApproveGlobal);
+  }, [autoApproveGlobal]);
 
   const handleToggle = async () => {
-    if (!currentTaskId || isLoading) return;
+    if (isLoading) return;
 
     setIsLoading(true);
     try {
       const newEnabled = !isEnabled;
-      const settings: TaskSettings = { autoApproveEdits: newEnabled };
-      await taskService.updateTaskSettings(currentTaskId, settings);
+      await setAutoApproveGlobal(newEnabled);
+
+      if (currentTaskId) {
+        const settings: TaskSettings = { autoApproveEdits: newEnabled };
+        await taskService.updateTaskSettings(currentTaskId, settings);
+        logger.info(
+          `Auto-approve edits ${newEnabled ? 'enabled' : 'disabled'} for task ${currentTaskId}`
+        );
+      }
 
       setIsEnabled(newEnabled);
 
       toast.success(
         newEnabled ? t.Chat.autoApproveEdits.enabled : t.Chat.autoApproveEdits.disabled
       );
-
-      logger.info(
-        `Auto-approve edits ${newEnabled ? 'enabled' : 'disabled'} for task ${currentTaskId}`
-      );
     } catch (error) {
-      logger.error('Failed to update task settings:', error);
+      logger.error('Failed to update auto-approve setting:', error);
       toast.error(t.Chat.autoApproveEdits.toggleFailed);
     } finally {
       setIsLoading(false);
@@ -84,7 +69,7 @@ export function AutoApproveEditsButton() {
           size="icon"
           className="h-7 w-7 relative"
           onClick={handleToggle}
-          disabled={!currentTaskId || isLoading}
+          disabled={isLoading}
           aria-label={t.Chat.autoApproveEdits.title}
         >
           {isEnabled ? (

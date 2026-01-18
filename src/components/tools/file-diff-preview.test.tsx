@@ -5,7 +5,12 @@ import { FileDiffPreview } from './file-diff-preview';
 
 // Mock useSettingsStore to return English language
 vi.mock('@/stores/settings-store', () => ({
-  useSettingsStore: (selector: (state: { language: string }) => string) => selector({ language: 'en' }),
+  useSettingsStore: (selector: (state: { language: string; getAutoApproveEditsGlobal: () => boolean }) => string) =>
+    selector({
+      language: 'en',
+      getAutoApproveEditsGlobal: () => false,
+      setAutoApproveEditsGlobal: vi.fn(),
+    }),
 }));
 
 // Helper function to test diff generation (extracted for testing)

@@ -29,7 +29,11 @@ vi.mock('@/stores/user-question-store', () => ({
 
 vi.mock('@/stores/settings-store', () => ({
   useSettingsStore: vi.fn((selector) => {
-    const state = { language: 'en' };
+    const state = {
+      language: 'en',
+      getAutoApproveEditsGlobal: () => false,
+      setAutoApproveEditsGlobal: vi.fn(),
+    };
     if (typeof selector === 'function') {
       return selector(state);
     }
@@ -42,7 +46,11 @@ import { askUserQuestionsTool } from './ask-user-questions-tool';
 
 vi.mock('@/stores/settings-store', () => ({
   useSettingsStore: vi.fn((selector) => {
-    const state = { language: 'en' };
+    const state = {
+      language: 'en',
+      getAutoApproveEditsGlobal: () => false,
+      setAutoApproveEditsGlobal: vi.fn(),
+    };
     if (typeof selector === 'function') {
       return selector(state);
     }

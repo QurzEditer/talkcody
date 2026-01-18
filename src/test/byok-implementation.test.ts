@@ -37,10 +37,14 @@ vi.mock('@/stores/settings-store', () => ({
     getApiKeys: vi.fn(),
     getApiKeysSync: vi.fn(),
     setApiKeys: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
   useSettingsStore: {
     getState: vi.fn(() => ({
       getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
   },
 }));

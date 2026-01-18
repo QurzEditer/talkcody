@@ -54,10 +54,16 @@ vi.mock('@/locales', () => ({
 
 vi.mock('@/stores/settings-store', () => ({
   useSettingsStore: {
-    getState: vi.fn(() => ({ language: 'en' })),
+    getState: vi.fn(() => ({
+      language: 'en',
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
+    })),
   },
   settingsManager: {
     setCurrentRootPath: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

@@ -17,6 +17,8 @@ vi.mock('@tauri-apps/api/event', () => ({
 vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     getTerminalShell: vi.fn(() => 'auto'),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

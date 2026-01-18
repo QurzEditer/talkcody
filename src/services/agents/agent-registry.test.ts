@@ -26,6 +26,8 @@ vi.mock('../agent-database-service', () => ({
 vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     get: vi.fn().mockResolvedValue('gpt-4@openai'),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

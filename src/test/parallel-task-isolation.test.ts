@@ -14,11 +14,15 @@ vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     getCurrentRootPath: vi.fn(() => '/main/project'),
     getProject: vi.fn(() => Promise.resolve('project-1')),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
   useSettingsStore: {
     getState: vi.fn(() => ({
       language: 'en',
       getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
     subscribe: vi.fn(),
     setState: vi.fn(),

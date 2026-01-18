@@ -34,11 +34,15 @@ vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     getProject: vi.fn(),
     getSync: vi.fn(() => 'en'),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
   useSettingsStore: (selector: (state: any) => any) => {
     const mockState = {
       language: 'en',
       setLanguage: vi.fn(),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     };
     return selector(mockState);
   },

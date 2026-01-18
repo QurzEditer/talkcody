@@ -36,11 +36,15 @@ vi.mock('../stores/settings-store', () => ({
     getCurrentTaskId: vi.fn().mockReturnValue('test-task-id'),
     getSync: vi.fn().mockReturnValue(undefined),
     getBatchSync: vi.fn().mockReturnValue({}),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
   useSettingsStore: {
     getState: vi.fn(() => ({
       language: 'en',
       getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
   },
 }));

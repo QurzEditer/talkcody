@@ -37,9 +37,16 @@ vi.mock('@/stores/settings-store', () => ({
     setCurrentProjectId: vi.fn().mockResolvedValue(undefined),
     getProject: vi.fn(() => Promise.resolve('test-project')),
     setProject: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
   useSettingsStore: {
-    getState: vi.fn().mockReturnValue({ language: 'en', getReasoningEffort: vi.fn(() => 'medium') }),
+    getState: vi.fn().mockReturnValue({
+      language: 'en',
+      getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
+    }),
   },
 }));
 

@@ -13,10 +13,13 @@ vi.mock('@tauri-apps/api/core', () => ({
 vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     getCurrentRootPath: vi.fn(() => '/test/root'),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
   },
   useSettingsStore: {
     getState: vi.fn(() => ({
       getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
   },
 }));

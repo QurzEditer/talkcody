@@ -45,6 +45,8 @@ vi.mock('@/stores/settings-store', () => ({
     getProject: vi.fn(),
     setCurrentTaskId: vi.fn(),
     getCurrentTaskId: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

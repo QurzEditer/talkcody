@@ -19,6 +19,8 @@ vi.mock('@/stores/settings-store', () => ({
     getState: vi.fn(() => ({
       language: 'en',
       theme: 'dark',
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
     subscribe: vi.fn(),
     setState: vi.fn(),

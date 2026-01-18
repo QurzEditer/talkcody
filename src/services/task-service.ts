@@ -40,6 +40,10 @@ class TaskService {
     const title = generateConversationTitle(userMessage);
     const projectId = options?.projectId || (await settingsManager.getProject());
 
+    const autoApproveGlobal = await settingsManager.getAutoApproveEditsGlobal();
+    const initialTaskSettings: TaskSettings | undefined = autoApproveGlobal
+      ? { autoApproveEdits: true }
+      : undefined;
     const task: Task = {
       id: taskId,
       title,
@@ -50,6 +54,7 @@ class TaskService {
       cost: 0,
       input_token: 0,
       output_token: 0,
+      settings: initialTaskSettings ? JSON.stringify(initialTaskSettings) : undefined,
     };
 
     // 1. Update store (synchronous)
@@ -60,6 +65,14 @@ class TaskService {
     try {
       await databaseService.createTask(title, taskId, projectId);
       logger.info('[TaskService] Task created', { taskId, title });
+
+      if (initialTaskSettings) {
+        try {
+          await this.updateTaskSettings(taskId, initialTaskSettings);
+        } catch (settingsError) {
+          logger.warn('[TaskService] Failed to apply auto-approve defaults', settingsError);
+        }
+      }
     } catch (error) {
       logger.error('[TaskService] Failed to create task:', error);
       // Remove from store on error

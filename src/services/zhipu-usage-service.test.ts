@@ -8,6 +8,8 @@ vi.mock('@/lib/tauri-fetch');
 vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     getApiKeys: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

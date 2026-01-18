@@ -54,11 +54,15 @@ vi.mock('@/stores/settings-store', () => ({
     getCurrentConversationId: vi.fn(() => 'test-conversation-id'),
     getSync: vi.fn().mockReturnValue(undefined),
     getBatchSync: vi.fn().mockReturnValue({}),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
   useSettingsStore: {
     getState: vi.fn(() => ({
       language: 'en',
       getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
   },
 }));

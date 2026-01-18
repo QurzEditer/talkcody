@@ -45,6 +45,8 @@ vi.mock('@/stores/settings-store', () => ({
       onboarding_completed: true,
       language: 'en',
       setLanguage: vi.fn(),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     };
     return selector ? selector(state) : state;
   }),
@@ -63,6 +65,7 @@ vi.mock('@/stores/settings-store', () => ({
         newTerminalTab: { key: 't', ctrlKey: true },
       })
     ),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
   },
 }));
 

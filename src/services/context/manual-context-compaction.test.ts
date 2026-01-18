@@ -41,7 +41,13 @@ vi.mock('@/stores/settings-store', () => ({
   useSettingsStore: {
     getState: () => ({
       language: 'en',
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     }),
+  },
+  settingsManager: {
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

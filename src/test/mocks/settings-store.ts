@@ -27,6 +27,8 @@ export const createMockSettingsManager = (
   getProject: vi.fn().mockResolvedValue(overrides.getProject ?? null),
   getSync: vi.fn().mockReturnValue(overrides.getSync ?? undefined),
   getBatchSync: vi.fn().mockReturnValue(overrides.getBatchSync ?? {}),
+  getAutoApproveEditsGlobal: vi.fn(() => false),
+  setAutoApproveEditsGlobal: vi.fn().mockResolvedValue(undefined),
   db: {
     select: vi.fn().mockResolvedValue(overrides.db?.select ?? []),
     execute: vi.fn().mockResolvedValue(overrides.db?.execute ?? { rowsAffected: 0 }),
@@ -44,6 +46,8 @@ export const createMockUseSettingsStore = (
     language: overrides.language ?? DEFAULT_LANGUAGE,
     theme: overrides.theme ?? 'dark',
     getReasoningEffort: vi.fn(() => 'medium'),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
     ...overrides.settings,
   })),
   subscribe: vi.fn(),

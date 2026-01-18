@@ -12,6 +12,8 @@ vi.mock('@/stores/settings-store', () => ({
     setAllShortcuts: vi.fn(),
     setShortcutConfig: vi.fn(),
     resetShortcutsToDefault: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

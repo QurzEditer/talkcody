@@ -33,6 +33,8 @@ export const mockSettingsStore = {
     getProject: vi.fn().mockResolvedValue({ id: 'default', name: 'Default' }),
     getSync: vi.fn().mockReturnValue(undefined),
     getBatchSync: vi.fn().mockReturnValue({}),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn().mockResolvedValue(undefined),
     db: {
       select: vi.fn().mockResolvedValue([]),
       execute: vi.fn().mockResolvedValue({ rowsAffected: 0 }),
@@ -49,6 +51,8 @@ export const mockSettingsStore = {
       theme: 'dark',
       assistantId: 'planner',
       getReasoningEffort: vi.fn(() => 'medium'),
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     })),
     subscribe: vi.fn(),
     setState: vi.fn(),
@@ -91,7 +95,7 @@ export const mockToast = {
 // ============================================================================
 export const mockTaskManager = {
   getTaskSettings: vi.fn().mockResolvedValue(null),
-  updateTaskSettings: vi.fn().mockImplementation(async (_taskId: string, settings: object) => {
+  updateTaskSettings: vi.fn().mockImplementation(async (_taskId: string, _settings: object) => {
     return Promise.resolve(undefined);
   }),
 };

@@ -35,6 +35,7 @@ interface SettingsState {
   get_context_tool_model: string;
   is_plan_mode_enabled: boolean;
   is_worktree_mode_enabled: boolean;
+  auto_approve_edits_global: boolean;
 
   // Project Settings
   project: string;
@@ -109,6 +110,8 @@ interface SettingsActions {
   setGetContextToolModel: (model: string) => Promise<void>;
   setPlanModeEnabled: (enabled: boolean) => Promise<void>;
   setWorktreeModeEnabled: (enabled: boolean) => Promise<void>;
+  setAutoApproveEditsGlobal: (enabled: boolean) => Promise<void>;
+  getAutoApproveEditsGlobal: () => boolean;
 
   // Project Settings
   setProject: (project: string) => Promise<void>;
@@ -214,6 +217,7 @@ const DEFAULT_SETTINGS: Omit<SettingsState, 'loading' | 'error' | 'isInitialized
   get_context_tool_model: GROK_CODE_FAST,
   is_plan_mode_enabled: false,
   is_worktree_mode_enabled: false,
+  auto_approve_edits_global: false,
   project: DEFAULT_PROJECT,
   current_root_path: '',
   custom_tools_dir: '',
@@ -282,6 +286,7 @@ class SettingsDatabase {
       ai_completion_enabled: 'false',
       get_context_tool_model: GROK_CODE_FAST,
       is_plan_mode_enabled: 'false',
+      auto_approve_edits_global: 'false',
       model_type_main: '',
       model_type_small: '',
       model_type_image_generator: '',
@@ -408,6 +413,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         'ai_completion_enabled',
         'get_context_tool_model',
         'is_plan_mode_enabled',
+        'auto_approve_edits_global',
         'reasoning_effort',
         'project',
         'current_root_path',
@@ -484,6 +490,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         get_context_tool_model: rawSettings.get_context_tool_model || GROK_CODE_FAST,
         is_plan_mode_enabled: rawSettings.is_plan_mode_enabled === 'true',
         is_worktree_mode_enabled: rawSettings.is_worktree_mode_enabled === 'true',
+        auto_approve_edits_global: rawSettings.auto_approve_edits_global === 'true',
         project: rawSettings.project || DEFAULT_PROJECT,
         current_root_path: rawSettings.current_root_path || '',
         custom_tools_dir: rawSettings.custom_tools_dir || '',
@@ -607,6 +614,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   setWorktreeModeEnabled: async (enabled: boolean) => {
     await settingsDb.set('is_worktree_mode_enabled', enabled.toString());
     set({ is_worktree_mode_enabled: enabled });
+  },
+
+  setAutoApproveEditsGlobal: async (enabled: boolean) => {
+    await settingsDb.set('auto_approve_edits_global', enabled.toString());
+    set({ auto_approve_edits_global: enabled });
   },
 
   // Project Settings
@@ -988,6 +1000,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   getWorktreeModeEnabled: () => {
     return get().is_worktree_mode_enabled;
   },
+
+  getAutoApproveEditsGlobal: () => {
+    return get().auto_approve_edits_global;
+  },
 }));
 
 // Export singleton for non-React usage (backward compatibility)
@@ -1017,6 +1033,8 @@ export const settingsManager = {
   setPlanModeEnabled: (enabled: boolean) => useSettingsStore.getState().setPlanModeEnabled(enabled),
   setWorktreeModeEnabled: (enabled: boolean) =>
     useSettingsStore.getState().setWorktreeModeEnabled(enabled),
+  setAutoApproveEditsGlobal: (enabled: boolean) =>
+    useSettingsStore.getState().setAutoApproveEditsGlobal(enabled),
   setCustomToolsDir: (path: string) => useSettingsStore.getState().setCustomToolsDir(path),
 
   getModel: () => useSettingsStore.getState().getModel(),
@@ -1028,6 +1046,7 @@ export const settingsManager = {
   getAICompletionEnabled: () => useSettingsStore.getState().getAICompletionEnabled(),
   getPlanModeEnabled: () => useSettingsStore.getState().getPlanModeEnabled(),
   getWorktreeModeEnabled: () => useSettingsStore.getState().getWorktreeModeEnabled(),
+  getAutoApproveEditsGlobal: () => useSettingsStore.getState().getAutoApproveEditsGlobal(),
 
   // API Keys
   setApiKeys: (apiKeys: ApiKeySettings) => useSettingsStore.getState().setApiKeys(apiKeys),

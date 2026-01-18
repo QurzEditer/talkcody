@@ -14,12 +14,15 @@ vi.mock('@/stores/settings-store', () => ({
       sidebar_view: 'files',
       setSidebarView: vi.fn(),
       getSidebarView: () => 'files',
+      getAutoApproveEditsGlobal: vi.fn(() => false),
+      setAutoApproveEditsGlobal: vi.fn(),
     };
     return selector ? selector(mockState) : mockState;
   }),
   settingsManager: {
     getSidebarView: () => 'files',
     setSidebarView: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
   },
 }));
 

@@ -28,6 +28,8 @@ vi.mock('@/stores/settings-store', () => ({
     getAgentId: vi.fn().mockResolvedValue('coding'),
     get: vi.fn(),
     getApiKeys: vi.fn().mockResolvedValue({}),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

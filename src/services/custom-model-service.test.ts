@@ -25,6 +25,8 @@ vi.mock('@/stores/settings-store', () => ({
   settingsManager: {
     getProviderApiKey: vi.fn(),
     getProviderBaseUrl: vi.fn(),
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+    setAutoApproveEditsGlobal: vi.fn(),
   },
 }));
 

@@ -23,8 +23,12 @@ vi.mock('@/stores/window-scoped-repository-store', () => ({
 }));
 
 vi.mock('@/stores/settings-store', () => ({
-  useSettingsStore: (selector: (state: { language: string }) => string) => {
-    return selector({ language: 'en' });
+  useSettingsStore: (selector: (state: { language: string; getAutoApproveEditsGlobal: () => boolean }) => string) => {
+    return selector({
+      language: 'en',
+      getAutoApproveEditsGlobal: () => false,
+      setAutoApproveEditsGlobal: vi.fn(),
+    });
   },
 }));
 
