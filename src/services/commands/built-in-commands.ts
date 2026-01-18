@@ -179,7 +179,7 @@ export async function getBuiltInCommands(): Promise<Command[]> {
 
         let aiMessage =
           'Please help create a custom TalkCody agent. Gather requirements (name, purpose, tools, model type, rules, output format, dynamic context). ' +
-          'Return a single JSON spec in a ```json block (no code files, no registry edits). The UI will persist it to SQLite. ' +
+          'Use the createAgent tool to persist the agent (no code files, no registry edits). ' +
           'Ensure the agent is visible in the local agents list after refresh. ';
 
         if (agentHint) {

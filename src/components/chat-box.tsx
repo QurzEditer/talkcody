@@ -12,7 +12,6 @@ import { getLocale, type SupportedLocale } from '@/locales';
 import { parseModelIdentifier } from '@/providers/core/provider-utils';
 import { modelService } from '@/providers/stores/provider-store';
 import { agentRegistry } from '@/services/agents/agent-registry';
-import { persistCreateAgentFromText } from '@/services/agents/create-agent-from-text';
 import { commandExecutor } from '@/services/commands/command-executor';
 import { commandRegistry } from '@/services/commands/command-registry';
 import { databaseService } from '@/services/database-service';
@@ -75,7 +74,6 @@ export const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
   ) => {
     const [input, setInput] = useState('');
     const [showTalkCodyFreeLoginDialog, setShowTalkCodyFreeLoginDialog] = useState(false);
-    const [lastCreateAgentTaskId, setLastCreateAgentTaskId] = useState<string | null>(null);
     const [isCompactionDialogOpen, setIsCompactionDialogOpen] = useState(false);
     const [isCompacting, setIsCompacting] = useState(false);
     const [compactionStats, setCompactionStats] = useState<{
@@ -131,19 +129,6 @@ export const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
     // Note: State sync effect removed - isLoading and serverStatus now derived from store
     // Note: Streaming content sync effect removed - executionService handles message updates
 
-    const handleCreateAgentSpec = async (assistantText: string): Promise<boolean> => {
-      const result = await persistCreateAgentFromText(assistantText);
-      if (!result.handled) return false;
-
-      if (result.success) {
-        toast.success(t.Agents.created);
-      } else {
-        toast.error(t.Agents.saveFailed);
-      }
-
-      return true;
-    };
-
     const processMessage = async (
       userMessage: string,
       attachments: MessageAttachment[] | undefined,
@@ -155,7 +140,6 @@ export const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
 
       // Use override agent if provided (for commands), otherwise use user's selected agent
       const agentId = overrideAgentId || (await settingsManager.getAgentId());
-      const isCreateAgentCommand = agentId === 'create-agent';
       // Get agent with MCP tools resolved
       let agent = await agentRegistry.getWithResolvedTools(agentId);
       if (!agent) {
@@ -194,10 +178,6 @@ export const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
           // Note: No need to reset loading state - nothing was started
           return;
         }
-      }
-
-      if (isCreateAgentCommand && activeTaskId) {
-        setLastCreateAgentTaskId(activeTaskId);
       }
 
       if (!activeTaskId) {
@@ -312,13 +292,6 @@ export const ChatBox = forwardRef<ChatBoxRef, ChatBoxProps>(
           },
           {
             onComplete: async (result) => {
-              if (isCreateAgentCommand && activeTaskId === lastCreateAgentTaskId) {
-                const handled = await handleCreateAgentSpec(result.fullText);
-                if (handled) {
-                  setLastCreateAgentTaskId(null);
-                  return;
-                }
-              }
               onResponseReceived?.(result.fullText);
             },
             onError: (error) => {

@@ -253,7 +253,7 @@ describe('Tool Registry', () => {
     it('should have exactly 1 write tool', () => {
       const allNames = getAllToolNames();
       const writeTools = allNames.filter(name => getToolMetadata(name).category === 'write');
-      expect(writeTools.length).toBe(1);
+      expect(writeTools.length).toBe(2);
     });
 
     it('should have exactly 1 edit tool', () => {

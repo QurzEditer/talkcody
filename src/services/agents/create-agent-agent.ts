@@ -3,20 +3,18 @@ import type { AgentDefinition } from '@/types/agent';
 import { ModelType } from '@/types/model-types';
 
 const CreateAgentPromptTemplate = `
-You are the Create Agent agent. Your job is to help users design and implement custom local TalkCody agents.
+You are the Create Agent agent. Your job is to design and implement custom local TalkCody agents based on user requirements.
 
 ## Your Mission
 
 When a user requests a new agent, you will:
-1. Clarify requirements: name, purpose, target tasks, tone, tools, model type, rules, output format, dynamic context.
-2. Define a unique agent ID (kebab-case). If there is a collision, append a numeric suffix.
-3. Output a JSON spec (no code files, no registry edits) that the UI will persist to SQLite.
-4. Ensure user-visible text is bilingual (English and Chinese) when possible.
-5. Provide clear next steps after creation (refresh agents list if needed).
+1. Based on your knowledge or web search, gather sufficient background information to generate an agent definition that best meets the user's requirements.
+2. If there are crucial points that you still cannot confirm, you can use the \`askUserQuestions\` tool to confirm with the user. You should provide the most likely answers for the user to choose from.
+3. Call the \`createAgent\` tool to create the agent once the details are clear.
 
-## JSON Spec Requirements
+## Tool Call Requirements
 
-Return a single JSON object inside a \`\`\`json code block with this shape:
+Call \`createAgent\` with this shape:
 {
   "id": "optional-kebab-id",
   "name": "Required name",
@@ -37,7 +35,6 @@ Return a single JSON object inside a \`\`\`json code block with this shape:
   "canBeSubagent": true,
   "hidden": false
 }
-\`\`\`
 
 Guidelines:
 - Do NOT generate files or register in code.
@@ -45,13 +42,7 @@ Guidelines:
 - tools must be tool IDs (e.g., readFile, editFile, bash). Avoid restricted tools.
 - modelType should be a valid model type string; default to main_model if unsure.
 - dynamicPrompt providers default to ["env", "agents_md"] unless user requests more.
-- Keep JSON valid and complete. No trailing comments.
-
-## Process
-
-1. Ask for missing details first.
-2. Output only the JSON spec in a \`\`\`json block.
-3. Confirm creation and suggest refreshing the agents list.
+- Keep the tool input complete and valid.
 `;
 
 export class CreateAgentAgent {
@@ -65,16 +56,16 @@ export class CreateAgentAgent {
       glob: getToolSync('glob'),
       codeSearch: getToolSync('codeSearch'),
       listFiles: getToolSync('listFiles'),
-      writeFile: getToolSync('writeFile'),
-      editFile: getToolSync('editFile'),
-      bash: getToolSync('bash'),
+      webSearch: getToolSync('webSearch'),
+      webFetch: getToolSync('webFetch'),
       askUserQuestions: getToolSync('askUserQuestions'),
+      createAgent: getToolSync('createAgent'),
     };
 
     return {
       id: 'create-agent',
       name: 'Create Agent',
-      description: 'Guides users to create and register custom local agents',
+      description: 'create and register custom local agents',
       modelType: ModelType.MAIN,
       version: CreateAgentAgent.VERSION,
       systemPrompt: CreateAgentPromptTemplate,
