@@ -25,6 +25,7 @@ import type {
   UpdateSkillParams,
 } from '@/types/agent-skills-spec';
 import { AgentSkillValidator } from './agent-skill-validator';
+import { ClaudeCodeImporter } from './claude-code-importer';
 import { SkillMdParser } from './skill-md-parser';
 
 /**
@@ -72,15 +73,18 @@ export class AgentSkillService {
     const skillsDir = await this.getSkillsDir();
     const entries = await readDir(skillsDir);
 
+    const claudeDirs = await ClaudeCodeImporter.getClaudeCodeSkillDirs();
+    const extraEntries = await this.listClaudeSkillEntries(claudeDirs);
+
+    const skillEntries = [...entries, ...extraEntries].filter((entry) => entry.isDirectory);
+
     // ✅ Concurrent loading: Load all skills in parallel
-    const loadPromises = entries
-      .filter((entry) => entry.isDirectory)
-      .map((entry) =>
-        this.loadSkill(entry.name).catch((error) => {
-          logger.warn(`Failed to load skill ${entry.name}:`, error);
-          return null;
-        })
-      );
+    const loadPromises = skillEntries.map((entry) =>
+      this.loadSkill(entry.name, entry.path).catch((error) => {
+        logger.warn(`Failed to load skill ${entry.name}:`, error);
+        return null;
+      })
+    );
 
     const loadedSkills = await Promise.all(loadPromises);
 
@@ -89,14 +93,14 @@ export class AgentSkillService {
 
     logger.info(`Loaded ${skills.length} skills (${loadedSkills.length - skills.length} failed)`);
 
-    return skills;
+    return this.dedupeSkills(skills);
   }
 
   /**
    * Load a skill by directory name
    */
-  async loadSkill(directoryName: string): Promise<AgentSkill | null> {
-    const skillsDir = await this.getSkillsDir();
+  async loadSkill(directoryName: string, baseDir?: string): Promise<AgentSkill | null> {
+    const skillsDir = baseDir ?? (await this.getSkillsDir());
     const skillPath = await join(skillsDir, directoryName);
 
     if (!(await exists(skillPath))) {
@@ -144,6 +148,49 @@ export class AgentSkillService {
 
     // Try to load directly by normalized name
     return await this.loadSkill(normalizedName);
+  }
+
+  private async listClaudeSkillEntries(
+    directories: Array<{ path: string }>
+  ): Promise<Array<{ name: string; path: string; isDirectory: boolean }>> {
+    const allEntries = await Promise.all(
+      directories.map(async (directory) => {
+        try {
+          const entries = await readDir(directory.path);
+          return entries
+            .filter((entry) => entry.isDirectory)
+            .map((entry) => ({
+              name: entry.name,
+              path: directory.path,
+              isDirectory: true,
+            }));
+        } catch (error) {
+          logger.warn(`Failed to read Claude Code skills directory ${directory.path}:`, error);
+          return [];
+        }
+      })
+    );
+
+    return allEntries.flat();
+  }
+
+  private async dedupeSkills(skills: AgentSkill[]): Promise<AgentSkill[]> {
+    const seen = new Set<string>();
+    const deduped: AgentSkill[] = [];
+
+    for (const skill of skills) {
+      const normalizedPath = await normalize(skill.path);
+      const key = `${skill.name}:${normalizedPath}`;
+
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      deduped.push(skill);
+    }
+
+    return deduped;
   }
 
   /**

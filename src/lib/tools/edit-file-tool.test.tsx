@@ -9,6 +9,11 @@ vi.mock('@/services/notification-service', () => ({
   },
 }));
 
+vi.mock('@/stores/settings-store', () => ({
+  settingsManager: {
+    getAutoApproveEditsGlobal: vi.fn(() => false),
+  },
+}));
 
 // Create a mock store that works both as a hook and with getState()
 vi.mock('@/stores/edit-review-store', () => {
@@ -46,6 +51,7 @@ import { repositoryService } from '@/services/repository-service';
 import { taskService } from '@/services/task-service';
 import { notificationService } from '@/services/notification-service';
 import { useEditReviewStore } from '@/stores/edit-review-store';
+import { settingsManager } from '@/stores/settings-store';
 
 // Context required by execute function
 const testContext = { taskId: 'conv-123', toolId: 'tool-123' };
@@ -64,6 +70,8 @@ describe('editFile tool', () => {
   beforeEach(() => {
     // Don't clear all mocks - it breaks the setup.ts mocks
     // Just reset the ones we control
+
+    vi.mocked(settingsManager.getAutoApproveEditsGlobal).mockReturnValue(false);
 
     // Reset the mock store state
     const state = getMockStoreState();
@@ -663,6 +671,23 @@ describe('editFile tool', () => {
 
         expect(result.success).toBe(true);
         expect(result.message).toContain('Auto-approved');
+        expect(mockRepositoryService.writeFile).toHaveBeenCalled();
+      });
+
+      it('should auto-approve when global setting is enabled and task settings are missing', async () => {
+        const fileContent = 'const value = "test";\n';
+        mockRepositoryService.readFileWithCache.mockResolvedValue(fileContent);
+        mockRepositoryService.writeFile.mockResolvedValue(undefined);
+        mockTaskService.getTaskSettings.mockResolvedValue(null);
+        vi.mocked(settingsManager.getAutoApproveEditsGlobal).mockReturnValue(true);
+
+        await editFile.execute({
+          file_path: 'src/file.ts',
+          edits: [{ old_string: 'const value = "test";', new_string: 'const value = "new";' }],
+          review_mode: true,
+        }, testContext);
+
+        expect(getMockStoreState().setPendingEdit).not.toHaveBeenCalled();
         expect(mockRepositoryService.writeFile).toHaveBeenCalled();
       });
 

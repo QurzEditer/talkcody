@@ -15,6 +15,7 @@ import {
   useEditReviewStore,
 } from '@/stores/edit-review-store';
 import { useFileChangesStore } from '@/stores/file-changes-store';
+import { settingsManager } from '@/stores/settings-store';
 import type { TaskSettings } from '@/types';
 import {
   findSimilarText,
@@ -347,33 +348,37 @@ Best practice workflow:
       }
 
       const settingsJson = await taskService.getTaskSettings(taskId);
+      let shouldAutoApprove = settingsManager.getAutoApproveEditsGlobal();
 
       if (settingsJson) {
         try {
           const settings: TaskSettings = JSON.parse(settingsJson);
-          if (settings.autoApproveEdits === true) {
-            // Auto-approve is enabled, directly write the file
-            await repositoryService.writeFile(fullPath, finalContent);
-            const successMessage = `Successfully applied ${edits.length} edit${edits.length > 1 ? 's' : ''} to ${file_path} (${totalOccurrences} total replacement${totalOccurrences > 1 ? 's' : ''}) [Auto-approved]`;
-            logger.info(successMessage);
-
-            // Track the file change
-            useFileChangesStore
-              .getState()
-              .addChange(taskId, toolId, file_path, 'edit', currentContent, finalContent);
-
-            return {
-              success: true,
-              message: successMessage,
-              type: 'success',
-              editsApplied: edits.length,
-              totalReplacements: totalOccurrences,
-            };
+          if (typeof settings.autoApproveEdits === 'boolean') {
+            shouldAutoApprove = settings.autoApproveEdits;
           }
         } catch (error) {
           logger.error('Failed to parse conversation settings:', error);
-          // Continue to review mode if settings parsing fails
         }
+      }
+
+      if (shouldAutoApprove) {
+        // Auto-approve is enabled, directly write the file
+        await repositoryService.writeFile(fullPath, finalContent);
+        const successMessage = `Successfully applied ${edits.length} edit${edits.length > 1 ? 's' : ''} to ${file_path} (${totalOccurrences} total replacement${totalOccurrences > 1 ? 's' : ''}) [Auto-approved]`;
+        logger.info(successMessage);
+
+        // Track the file change
+        useFileChangesStore
+          .getState()
+          .addChange(taskId, toolId, file_path, 'edit', currentContent, finalContent);
+
+        return {
+          success: true,
+          message: successMessage,
+          type: 'success',
+          editsApplied: edits.length,
+          totalReplacements: totalOccurrences,
+        };
       }
 
       // Handle review mode internally

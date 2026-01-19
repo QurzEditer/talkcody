@@ -15,6 +15,7 @@ import {
   useEditReviewStore,
 } from '@/stores/edit-review-store';
 import { useFileChangesStore } from '@/stores/file-changes-store';
+import { settingsManager } from '@/stores/settings-store';
 import type { TaskSettings } from '@/types';
 import { normalizeString } from '@/utils/text-replacement';
 
@@ -90,40 +91,44 @@ The file path should be an absolute path.`,
         throw new Error('taskId is required for writeFile tool');
       }
       const settingsJson = await taskService.getTaskSettings(taskId);
+      let shouldAutoApprove = settingsManager.getAutoApproveEditsGlobal();
 
       if (settingsJson) {
         try {
           const settings: TaskSettings = JSON.parse(settingsJson);
-          if (settings.autoApproveEdits === true) {
-            // Auto-approve is enabled, directly write the file
-            await repositoryService.writeFile(file_path, normalizedContent);
-            const successMessage = fileExists
-              ? `Successfully overwrote file: ${file_path} [Auto-approved]`
-              : `Successfully created file: ${file_path} [Auto-approved]`;
-            logger.info(successMessage);
-
-            // Track the file change (use 'edit' if file exists, 'write' if new)
-            useFileChangesStore
-              .getState()
-              .addChange(
-                taskId,
-                context.toolId,
-                file_path,
-                fileExists ? 'edit' : 'write',
-                originalContent,
-                normalizedContent
-              );
-
-            return {
-              success: true,
-              message: successMessage,
-              type: 'success',
-            };
+          if (typeof settings.autoApproveEdits === 'boolean') {
+            shouldAutoApprove = settings.autoApproveEdits;
           }
         } catch (error) {
           logger.error('Failed to parse conversation settings:', error);
-          // Continue to review mode if settings parsing fails
         }
+      }
+
+      if (shouldAutoApprove) {
+        // Auto-approve is enabled, directly write the file
+        await repositoryService.writeFile(file_path, normalizedContent);
+        const successMessage = fileExists
+          ? `Successfully overwrote file: ${file_path} [Auto-approved]`
+          : `Successfully created file: ${file_path} [Auto-approved]`;
+        logger.info(successMessage);
+
+        // Track the file change (use 'edit' if file exists, 'write' if new)
+        useFileChangesStore
+          .getState()
+          .addChange(
+            taskId,
+            context.toolId,
+            file_path,
+            fileExists ? 'edit' : 'write',
+            originalContent,
+            normalizedContent
+          );
+
+        return {
+          success: true,
+          message: successMessage,
+          type: 'success',
+        };
       }
 
       // Handle review mode internally

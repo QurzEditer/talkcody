@@ -103,8 +103,11 @@ export class KeepAwakeService {
 
       // Call Rust backend to increment reference count
       const wasFirst = await invoke<boolean>('keep_awake_acquire');
+      if (typeof wasFirst !== 'boolean') {
+        throw new Error('Invalid keep_awake_acquire response');
+      }
 
-      // Update local state
+      // Update local state only after backend success
       this.refCount += 1;
       this.isPreventing = this.refCount > 0;
       if (wasFirst) {

@@ -101,6 +101,25 @@ describe('KeepAwakeService', () => {
       );
     });
 
+    it('should not increment refCount when acquire fails', async () => {
+      vi.mocked(platform).mockResolvedValue('macos');
+      vi.mocked(invoke).mockImplementation((cmd) => {
+        if (cmd === 'keep_awake_acquire') {
+          return Promise.reject(new Error('Plugin error'));
+        }
+        if (cmd === 'keep_awake_get_ref_count') {
+          return Promise.reject(new Error('Plugin error'));
+        }
+        return Promise.reject(new Error('Unknown command'));
+      });
+
+      const result = await service.acquire();
+      const refCount = await service.getRefCount();
+
+      expect(result).toBe(false);
+      expect(refCount).toBe(0);
+    });
+
     it('should return false for unsupported platforms', async () => {
       vi.mocked(platform).mockResolvedValue('android');
       vi.clearAllMocks();

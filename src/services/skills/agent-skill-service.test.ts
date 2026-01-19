@@ -24,6 +24,12 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 	remove: vi.fn(),
 }));
 
+vi.mock('./claude-code-importer', () => ({
+	ClaudeCodeImporter: {
+		getClaudeCodeSkillDirs: vi.fn().mockResolvedValue([]),
+	},
+}));
+
 // Import mocked modules
 import { exists, mkdir, readDir, readTextFile, remove, writeTextFile } from '@tauri-apps/plugin-fs';
 
@@ -94,6 +100,54 @@ Content`;
 			expect(skills[0]?.name).toBe('skill-one');
 			expect(skills[1]?.name).toBe('skill-two');
 		});
+
+		it('should include skills from Claude Code directories', async () => {
+			const { ClaudeCodeImporter } = await import('./claude-code-importer');
+
+			vi.mocked(readDir).mockImplementation(async (path: string) => {
+				if (path === '/mock/app/data/skills') {
+					return [
+						{ isDirectory: true, name: 'local-skill', isFile: false, isSymlink: false },
+					];
+				}
+				if (path === '/mock/claude/skills') {
+					return [
+						{ isDirectory: true, name: 'claude-skill', isFile: false, isSymlink: false },
+					];
+				}
+				return [];
+			});
+
+			vi.mocked(ClaudeCodeImporter.getClaudeCodeSkillDirs).mockResolvedValue([
+				{ path: '/mock/claude/skills', type: 'personal' },
+			]);
+
+			vi.mocked(readTextFile).mockImplementation(async (path: string) => {
+				if (path.includes('local-skill')) {
+					return `---
+name: local-skill
+description: Local skill
+---
+
+Content`;
+				}
+				if (path.includes('claude-skill')) {
+					return `---
+name: claude-skill
+description: Claude skill
+---
+
+Content`;
+				}
+				return '';
+			});
+
+			const skills = await service.listSkills();
+
+			expect(skills).toHaveLength(2);
+			expect(skills.map((skill) => skill.name)).toEqual(['local-skill', 'claude-skill']);
+		});
+	});
 
 		it('should skip directories without SKILL.md', async () => {
 			vi.mocked(readDir).mockResolvedValue([
