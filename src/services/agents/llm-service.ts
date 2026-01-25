@@ -998,7 +998,7 @@ export class LLMService {
 
           loopState.lastFinishReason = await streamResult.finishReason;
           // Handle "unknown" finish reason by retrying without modifying messages
-          if (loopState.lastFinishReason === 'unknown' && toolCalls.length === 0) {
+          if (loopState.lastFinishReason === 'other' && toolCalls.length === 0) {
             const maxUnknownRetries = 3;
             loopState.unknownFinishReasonCount = (loopState.unknownFinishReasonCount || 0) + 1;
 
