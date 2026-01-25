@@ -1,5 +1,5 @@
 {
-  "version": "2026-01-16T02:43:13.661Z",
+  "version": "2026-01-25T18:24:44.076Z",
   "models": {
     "gpt-5-nano": {
       "name": "GPT-5 Nano",
@@ -146,8 +146,7 @@
       },
       "pricing": {
         "input": "0.0000003",
-        "output": "0.0000025",
-        "cachedInput": "0.00000003"
+        "output": "0.0000025"
       },
       "context_length": 1048576
     },
@@ -188,8 +187,7 @@
       },
       "pricing": {
         "input": "0.00000125",
-        "output": "0.00001",
-        "cachedInput": "0.000000125"
+        "output": "0.00001"
       },
       "context_length": 1048576
     },
@@ -441,11 +439,11 @@
         "ollama": "glm-4.7-flash"
       },
       "pricing": {
-        "input": "0.00000043",
-        "output": "0.00000175",
-        "cachedInput": "0.00000008"
+        "input": "0.00000006",
+        "output": "0.0000004",
+        "cachedInput": "0.00000001"
       },
-      "context_length": 202752
+      "context_length": 200000
     },
     "minimax-m21": {
       "name": "MiniMax M2.1",

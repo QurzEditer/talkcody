@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { logger } from '@/lib/logger';
 import { lspService } from '@/services/lsp';
 import { lspConnectionManager } from '@/services/lsp/lsp-connection-manager';
-import type { Hover, Location } from '@/services/lsp/lsp-protocol';
+import type { Diagnostic, Hover, Location } from '@/services/lsp/lsp-protocol';
 import {
   findWorkspaceRoot,
   getLanguageDisplayName,
@@ -278,73 +278,102 @@ export function useLsp({
   useEffect(() => {
     if (!isEnabled) return;
 
+    let lastUpdate = 0;
+    let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+    let pendingPayload: { uri: string; diagnostics: Diagnostic[] } | null = null;
+
+    const flushMarkers = () => {
+      if (!pendingPayload) return;
+      const { uri, diagnostics } = pendingPayload;
+      pendingPayload = null;
+      lastUpdate = Date.now();
+
+      if (!editor || !filePath) {
+        return;
+      }
+
+      const { showDiagnostics } = useLspStore.getState();
+      if (!showDiagnostics) return;
+
+      const model = editor.getModel();
+      if (!model) return;
+
+      const monaco = (window as unknown as { monaco?: typeof import('monaco-editor') }).monaco;
+      if (!monaco) return;
+
+      // Convert URI to file path for comparison
+      const diagnosticFilePath = uri.startsWith('file://') ? uri.slice(7) : uri;
+      if (diagnosticFilePath !== filePath) {
+        return;
+      }
+
+      // Verify the diagnostic is for a file with the same language as current LSP connection
+      const diagnosticLang = getLanguageIdForPath(diagnosticFilePath);
+      const currentLang = languageRef.current;
+      if (diagnosticLang && currentLang && diagnosticLang !== currentLang) {
+        logger.info(`[LSP] Diagnostics language mismatch: ${diagnosticLang} vs ${currentLang}`);
+        return;
+      }
+
+      // Get the language for this file to use as source
+      const diagnosticLanguage = getLanguageIdForPath(diagnosticFilePath) || 'lsp';
+
+      // Get severity filter settings
+      const { showErrors, showWarnings, showInfo, showHints } = useLspStore.getState();
+
+      // Convert LSP diagnostics to Monaco markers with severity filtering
+      const markers = diagnostics
+        .filter((d) => {
+          switch (d.severity) {
+            case 1: // Error
+              return showErrors;
+            case 2: // Warning
+              return showWarnings;
+            case 3: // Info
+              return showInfo;
+            case 4: // Hint
+              return showHints;
+            default:
+              return true;
+          }
+        })
+        .map((d) => ({
+          severity: mapLspSeverity(d.severity, monaco),
+          message: d.message,
+          startLineNumber: d.range.start.line + 1,
+          startColumn: d.range.start.character + 1,
+          endLineNumber: d.range.end.line + 1,
+          endColumn: d.range.end.character + 1,
+          source: diagnosticLanguage,
+          code: d.code?.toString(),
+        }));
+
+      monaco.editor.setModelMarkers(model, 'lsp', markers);
+    };
+
     const unsubscribe = lspService.onDiagnostics((uri, diagnostics) => {
       logger.info(`[LSP] Received ${diagnostics.length} diagnostics for ${uri}`);
       setDiagnostics(uri, diagnostics);
 
-      // Apply diagnostics to editor immediately
-      if (editor && filePath) {
-        const { showDiagnostics } = useLspStore.getState();
-        if (!showDiagnostics) return;
+      pendingPayload = { uri, diagnostics };
+      const now = Date.now();
+      const timeSinceLast = now - lastUpdate;
+      const delay = timeSinceLast >= 100 ? 0 : 100 - timeSinceLast;
 
-        const model = editor.getModel();
-        if (!model) return;
-
-        const monaco = (window as unknown as { monaco?: typeof import('monaco-editor') }).monaco;
-        if (!monaco) return;
-
-        // Convert URI to file path for comparison
-        const diagnosticFilePath = uri.startsWith('file://') ? uri.slice(7) : uri;
-        if (diagnosticFilePath !== filePath) {
-          return;
-        }
-
-        // Verify the diagnostic is for a file with the same language as current LSP connection
-        const diagnosticLang = getLanguageIdForPath(diagnosticFilePath);
-        const currentLang = languageRef.current;
-        if (diagnosticLang && currentLang && diagnosticLang !== currentLang) {
-          logger.info(`[LSP] Diagnostics language mismatch: ${diagnosticLang} vs ${currentLang}`);
-          return;
-        }
-
-        // Get the language for this file to use as source
-        const diagnosticLanguage = getLanguageIdForPath(diagnosticFilePath) || 'lsp';
-
-        // Get severity filter settings
-        const { showErrors, showWarnings, showInfo, showHints } = useLspStore.getState();
-
-        // Convert LSP diagnostics to Monaco markers with severity filtering
-        const markers = diagnostics
-          .filter((d) => {
-            switch (d.severity) {
-              case 1: // Error
-                return showErrors;
-              case 2: // Warning
-                return showWarnings;
-              case 3: // Info
-                return showInfo;
-              case 4: // Hint
-                return showHints;
-              default:
-                return true;
-            }
-          })
-          .map((d) => ({
-            severity: mapLspSeverity(d.severity, monaco),
-            message: d.message,
-            startLineNumber: d.range.start.line + 1,
-            startColumn: d.range.start.character + 1,
-            endLineNumber: d.range.end.line + 1,
-            endColumn: d.range.end.character + 1,
-            source: diagnosticLanguage,
-            code: d.code?.toString(),
-          }));
-
-        monaco.editor.setModelMarkers(model, 'lsp', markers);
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+      }
+      if (delay === 0) {
+        flushMarkers();
+      } else {
+        pendingTimer = setTimeout(flushMarkers, delay);
       }
     });
 
     return () => {
+      if (pendingTimer) {
+        clearTimeout(pendingTimer);
+      }
       unsubscribe();
     };
   }, [isEnabled, setDiagnostics, editor, filePath]);

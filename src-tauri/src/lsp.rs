@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, ChildStdin, ChildStdout, Command as TokioCommand};
+use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command as TokioCommand};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -172,6 +172,7 @@ pub struct LspServer {
     pub child: Option<Child>,
     pub stdin: Option<ChildStdin>,
     pub stdout_task: Option<JoinHandle<()>>,
+    pub stderr_task: Option<JoinHandle<()>>,
     pub is_initialized: bool,
 }
 
@@ -184,6 +185,7 @@ impl LspServer {
             child: None,
             stdin: None,
             stdout_task: None,
+            stderr_task: None,
             is_initialized: false,
         }
     }
@@ -951,6 +953,14 @@ pub async fn lsp_start_server(
             return Err("Failed to get stdout".to_string());
         }
     };
+    let stderr = match child.stderr.take() {
+        Some(stderr) => stderr,
+        None => {
+            let mut registry = state.0.lock().await;
+            registry.cancel_creation(&language, &root_path_str);
+            return Err("Failed to get stderr".to_string());
+        }
+    };
 
     // Create server instance
     let mut server = LspServer::new(server_id.clone(), language.clone(), root_path_str.clone());
@@ -995,10 +1005,36 @@ pub async fn lsp_start_server(
         }
     });
 
-    // Store the task handle
+    // Spawn stderr reader task to avoid pipe backpressure
+    let server_id_stderr = server_id.clone();
+    let stderr_task = tokio::spawn(async move {
+        let mut reader = BufReader::new(stderr);
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line).await {
+                Ok(0) => {
+                    log::info!("LSP stderr reader ended for {}", server_id_stderr);
+                    break;
+                }
+                Ok(_) => {
+                    let trimmed = line.trim_end();
+                    if !trimmed.is_empty() {
+                        log::debug!("LSP stderr [{}]: {}", server_id_stderr, trimmed);
+                    }
+                }
+                Err(e) => {
+                    log::info!("LSP stderr reader error for {}: {}", server_id_stderr, e);
+                    break;
+                }
+            }
+        }
+    });
+
+    // Store the task handles
     {
         let mut server = server_arc.lock().await;
         server.stdout_task = Some(stdout_task);
+        server.stderr_task = Some(stderr_task);
     }
 
     Ok(LspStartResponse {
@@ -1054,8 +1090,11 @@ pub async fn lsp_stop_server(
 
     let mut server = server_arc.lock().await;
 
-    // Cancel stdout task
+    // Cancel stdout/stderr tasks
     if let Some(task) = server.stdout_task.take() {
+        task.abort();
+    }
+    if let Some(task) = server.stderr_task.take() {
         task.abort();
     }
 
@@ -1636,6 +1675,7 @@ mod tests {
         assert!(server.child.is_none());
         assert!(server.stdin.is_none());
         assert!(server.stdout_task.is_none());
+        assert!(server.stderr_task.is_none());
         assert!(!server.is_initialized);
     }
 

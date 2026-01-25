@@ -38,12 +38,22 @@ export async function getLspCompletion(
       return null;
     }
 
-    // Try to find a server by checking all connections
+    // Prefer a server with a root that matches this file
     const allConns = lspConnectionManager.getAllConnections();
     for (const [, c] of allConns) {
-      if (c.language === language) {
+      if (c.language === language && filePath.startsWith(c.rootPath)) {
         conn = c;
         break;
+      }
+    }
+
+    // Fallback to any server for the language if no root match found
+    if (!conn) {
+      for (const [, c] of allConns) {
+        if (c.language === language) {
+          conn = c;
+          break;
+        }
       }
     }
 

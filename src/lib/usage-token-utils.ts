@@ -4,13 +4,23 @@ export type UsageLike = {
   totalTokens?: number;
   promptTokens?: number;
   completionTokens?: number;
+  cachedInputTokens?: number;
+  cacheCreationInputTokens?: number;
+};
+
+export type NormalizedUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cachedInputTokens?: number;
+  cacheCreationInputTokens?: number;
 };
 
 export class UsageTokenUtils {
   static normalizeUsageTokens(
     usage?: UsageLike | null,
     totalUsage?: UsageLike | null
-  ): { inputTokens: number; outputTokens: number; totalTokens: number } | null {
+  ): NormalizedUsage | null {
     const primary = usage ?? totalUsage ?? null;
     const inputTokens =
       primary?.inputTokens ??
@@ -24,6 +34,10 @@ export class UsageTokenUtils {
       totalUsage?.outputTokens ??
       totalUsage?.completionTokens ??
       0;
+    const cachedInputTokens =
+      primary?.cachedInputTokens ?? totalUsage?.cachedInputTokens ?? undefined;
+    const cacheCreationInputTokens =
+      primary?.cacheCreationInputTokens ?? totalUsage?.cacheCreationInputTokens ?? undefined;
     let totalTokens = primary?.totalTokens ?? totalUsage?.totalTokens ?? inputTokens + outputTokens;
 
     if (totalTokens > 0 && (inputTokens > 0 || outputTokens > 0)) {
@@ -40,6 +54,13 @@ export class UsageTokenUtils {
 
     if (totalTokens === 0) return null;
 
-    return { inputTokens, outputTokens, totalTokens };
+    const normalized: NormalizedUsage = { inputTokens, outputTokens, totalTokens };
+    if (cachedInputTokens !== undefined) {
+      normalized.cachedInputTokens = cachedInputTokens;
+    }
+    if (cacheCreationInputTokens !== undefined) {
+      normalized.cacheCreationInputTokens = cacheCreationInputTokens;
+    }
+    return normalized;
   }
 }

@@ -66,6 +66,7 @@ interface PendingRequest {
   resolve: (result: unknown) => void;
   reject: (error: Error) => void;
   method: string;
+  serverId: string;
   timeout: ReturnType<typeof setTimeout>;
 }
 
@@ -223,34 +224,47 @@ class LspService {
       );
     }
 
-    // Start the server
-    const response = await invoke<LspStartResponse>('lsp_start_server', {
-      language,
-      rootPath,
-    });
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const response = await invoke<LspStartResponse>('lsp_start_server', {
+          language,
+          rootPath,
+        });
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to start LSP server');
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to start LSP server');
+        }
+
+        const { serverId } = response;
+
+        // Register the connection with refCount = 1
+        this.servers.set(serverId, {
+          serverId,
+          language,
+          rootPath,
+          isInitialized: false,
+          documentVersions: new Map(),
+          refCount: 1,
+          cleanupTimer: null,
+        });
+
+        // Initialize the server
+        await this.initializeServer(serverId, rootPath);
+
+        logger.info(`[LSP] Server started and initialized: ${serverId}`);
+        return serverId;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('already being created') && attempt < MAX_ATTEMPTS) {
+          await new Promise((resolve) => setTimeout(resolve, 200 * attempt));
+          continue;
+        }
+        throw error;
+      }
     }
 
-    const { serverId } = response;
-
-    // Register the connection with refCount = 1
-    this.servers.set(serverId, {
-      serverId,
-      language,
-      rootPath,
-      isInitialized: false,
-      documentVersions: new Map(),
-      refCount: 1,
-      cleanupTimer: null,
-    });
-
-    // Initialize the server
-    await this.initializeServer(serverId, rootPath);
-
-    logger.info(`[LSP] Server started and initialized: ${serverId}`);
-    return serverId;
+    throw new Error('Failed to start LSP server after retries');
   }
 
   /**
@@ -274,6 +288,16 @@ class LspService {
     }
 
     logger.info(`[LSP] Stopping server: ${serverId}`);
+
+    // Reject pending requests for this server immediately
+    for (const [id, pending] of this.pendingRequests) {
+      if (pending.serverId !== serverId) {
+        continue;
+      }
+      clearTimeout(pending.timeout);
+      pending.reject(new Error('LSP server stopped'));
+      this.pendingRequests.delete(id);
+    }
 
     try {
       // Send shutdown request
@@ -913,6 +937,7 @@ class LspService {
         resolve: resolve as (result: unknown) => void,
         reject,
         method,
+        serverId,
         timeout,
       });
 

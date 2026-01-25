@@ -5,7 +5,7 @@ export interface ModelConfig {
   imageOutput?: boolean;
   providers: string[]; // Will be validated against ProviderIds at runtime
   providerMappings?: Record<string, string>;
-  pricing?: { input: string; output: string };
+  pricing?: { input: string; output: string; cachedInput?: string; cacheCreation?: string };
   context_length?: number;
 }
 

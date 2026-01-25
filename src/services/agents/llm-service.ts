@@ -695,10 +695,17 @@ export class LLMService {
                   }
 
                   if (normalizedUsage) {
-                    const { inputTokens, outputTokens } = normalizedUsage;
+                    const {
+                      inputTokens,
+                      outputTokens,
+                      cachedInputTokens,
+                      cacheCreationInputTokens,
+                    } = normalizedUsage;
                     const cost = aiPricingService.calculateCost(model, {
                       inputTokens,
                       outputTokens,
+                      cachedInputTokens,
+                      cacheCreationInputTokens,
                     });
 
                     let contextUsage: number | undefined;

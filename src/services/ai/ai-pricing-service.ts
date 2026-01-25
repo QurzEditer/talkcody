@@ -10,7 +10,6 @@ export interface TokenUsage {
 
 class AIPricingService {
   private getModel(modelId: string) {
-    // Try direct lookup first
     if (MODEL_CONFIGS[modelId]) {
       return MODEL_CONFIGS[modelId];
     }
@@ -31,9 +30,28 @@ class AIPricingService {
       return 0;
     }
 
+    const parseRate = (value: string | undefined, fallback: number): number => {
+      const parsed = Number.parseFloat(value ?? '');
+      return Number.isFinite(parsed) ? parsed : fallback;
+    };
+
+    const inputRate = parseRate(model.pricing.input, 0);
+    const outputRate = parseRate(model.pricing.output, 0);
+    const cachedInputRate = parseRate(model.pricing.cachedInput, inputRate);
+    const cacheCreationRate = parseRate(model.pricing.cacheCreation, inputRate);
+
+    const cachedInputTokens = usage.cachedInputTokens ?? 0;
+    const cacheCreationInputTokens = usage.cacheCreationInputTokens ?? 0;
+    const nonCachedInputTokens = Math.max(
+      0,
+      usage.inputTokens - cachedInputTokens - cacheCreationInputTokens
+    );
+
     let cost = 0;
-    cost += usage.inputTokens * (Number.parseFloat(model.pricing.input) || 0);
-    cost += usage.outputTokens * (Number.parseFloat(model.pricing.output) || 0);
+    cost += nonCachedInputTokens * inputRate;
+    cost += cachedInputTokens * cachedInputRate;
+    cost += cacheCreationInputTokens * cacheCreationRate;
+    cost += usage.outputTokens * outputRate;
 
     return cost;
   }
