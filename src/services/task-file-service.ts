@@ -5,7 +5,7 @@ import { exists, mkdir, readDir, readTextFile, remove, writeTextFile } from '@ta
 import { logger } from '@/lib/logger';
 import { getEffectiveWorkspaceRoot } from './workspace-root-service';
 
-export type FileType = 'output' | 'plan' | 'context';
+export type FileType = 'output' | 'plan' | 'context' | 'tool';
 
 /**
  * TaskFileService - Unified task file storage service
@@ -65,9 +65,12 @@ export class TaskFileService {
   ): Promise<string> {
     // Sanitize toolUseId for use in file name to prevent path traversal
     const sanitizedToolUseId = this.sanitizeFileName(toolUseId || 'unknown');
+    const safeSuffix = suffix ? this.ensureSafeFileName(suffix) : undefined;
 
     const typeDir = await this.getTypeDirectory('output', taskId);
-    const fileName = suffix ? `${sanitizedToolUseId}_${suffix}.log` : `${sanitizedToolUseId}.log`;
+    const fileName = safeSuffix
+      ? `${sanitizedToolUseId}_${safeSuffix}.log`
+      : `${sanitizedToolUseId}.log`;
     const filePath = await join(typeDir, fileName);
 
     await writeTextFile(filePath, content);
@@ -86,13 +89,24 @@ export class TaskFileService {
       .trim();
   }
 
+  private ensureSafeFileName(fileName: string): string {
+    const safeFileName = this.sanitizeFileName(fileName);
+    if (safeFileName !== fileName) {
+      throw new Error('Invalid file name');
+    }
+    return safeFileName;
+  }
+
   /**
    * Read tool output file
    */
   async getOutput(taskId: string, toolUseId: string, suffix?: string): Promise<string | null> {
     const sanitizedToolUseId = this.sanitizeFileName(toolUseId || 'unknown');
+    const safeSuffix = suffix ? this.ensureSafeFileName(suffix) : undefined;
     const workspaceRoot = await getEffectiveWorkspaceRoot(taskId);
-    const fileName = suffix ? `${sanitizedToolUseId}_${suffix}.log` : `${sanitizedToolUseId}.log`;
+    const fileName = safeSuffix
+      ? `${sanitizedToolUseId}_${safeSuffix}.log`
+      : `${sanitizedToolUseId}.log`;
     const filePath = await join(workspaceRoot, '.talkcody', 'output', taskId, fileName);
 
     try {
@@ -109,8 +123,11 @@ export class TaskFileService {
   async removeOutput(taskId: string, toolUseId: string, suffix?: string): Promise<boolean> {
     try {
       const sanitizedToolUseId = this.sanitizeFileName(toolUseId || 'unknown');
+      const safeSuffix = suffix ? this.ensureSafeFileName(suffix) : undefined;
       const workspaceRoot = await getEffectiveWorkspaceRoot(taskId);
-      const fileName = suffix ? `${sanitizedToolUseId}_${suffix}.log` : `${sanitizedToolUseId}.log`;
+      const fileName = safeSuffix
+        ? `${sanitizedToolUseId}_${safeSuffix}.log`
+        : `${sanitizedToolUseId}.log`;
       const filePath = await join(workspaceRoot, '.talkcody', 'output', taskId, fileName);
 
       if (await exists(filePath)) {
@@ -137,7 +154,8 @@ export class TaskFileService {
     content: string
   ): Promise<string> {
     const typeDir = await this.getTypeDirectory(type, taskId);
-    const filePath = await join(typeDir, fileName);
+    const safeFileName = this.ensureSafeFileName(fileName);
+    const filePath = await join(typeDir, safeFileName);
     await writeTextFile(filePath, content);
     logger.info(`Wrote file: ${filePath}`);
     return filePath;
@@ -148,7 +166,8 @@ export class TaskFileService {
    */
   async readFile(type: FileType, taskId: string, fileName: string): Promise<string | null> {
     const workspaceRoot = await getEffectiveWorkspaceRoot(taskId);
-    const filePath = await join(workspaceRoot, '.talkcody', type, taskId, fileName);
+    const safeFileName = this.ensureSafeFileName(fileName);
+    const filePath = await join(workspaceRoot, '.talkcody', type, taskId, safeFileName);
 
     try {
       if (!(await exists(filePath))) {
@@ -169,7 +188,7 @@ export class TaskFileService {
   async cleanupTask(taskId: string): Promise<void> {
     try {
       const workspaceRoot = await getEffectiveWorkspaceRoot(taskId);
-      const fileTypes: FileType[] = ['output', 'plan', 'context'];
+      const fileTypes: FileType[] = ['output', 'plan', 'context', 'tool'];
 
       for (const type of fileTypes) {
         const taskDir = await join(workspaceRoot, '.talkcody', type, taskId);

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { taskFileService } from '@/services/task-file-service';
 import * as utils from '../utils';
 import { fetchWebContent, fetchWithJina, fetchWithTavily } from './web-fetcher';
 import * as readabilityExtractorModule from './readability-extractor';
@@ -14,6 +15,12 @@ const mockFetchWithTimeout = utils.fetchWithTimeout as Mock;
 vi.mock('./readability-extractor', () => ({
   readabilityExtractor: {
     extract: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/task-file-service', () => ({
+  taskFileService: {
+    writeFile: vi.fn(),
   },
 }));
 
@@ -57,12 +64,15 @@ describe('web-fetcher', () => {
         publishedDate: '2025-01-01',
       });
 
-      expect(mockFetchWithTimeout).toHaveBeenCalledWith('https://r.jina.ai/https://example.com', {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-        },
-      });
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        'https://r.jina.ai/https%3A%2F%2Fexample.com',
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+        }
+      );
     });
 
     it('should handle null publishedDate', async () => {
@@ -223,9 +233,70 @@ describe('web-fetcher', () => {
       expect(result.content).toBe('Test content');
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
       expect(mockFetchWithTimeout).toHaveBeenCalledWith(
-        'https://r.jina.ai/https://example.com',
+        'https://r.jina.ai/https%3A%2F%2Fexample.com',
         expect.any(Object)
       );
+    });
+
+    it('should save content to task file when content exceeds limit', async () => {
+      const longContent = 'a'.repeat(10001);
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: {
+            title: 'Test Page',
+            url: 'https://example.com',
+            content: longContent,
+            publishedDate: null,
+          },
+        }),
+        text: vi.fn(),
+      };
+
+      mockFetchWithTimeout.mockResolvedValue(mockResponse as any);
+      (taskFileService.writeFile as Mock).mockResolvedValue('/test/root/.talkcody/tool/task-1/tool_web-fetch.txt');
+
+      const result = await fetchWebContent('https://example.com', {
+        taskId: 'task-1',
+        toolId: 'tool',
+      });
+
+      expect(taskFileService.writeFile).toHaveBeenCalledWith(
+        'tool',
+        'task-1',
+        'tool_web-fetch.txt',
+        longContent
+      );
+      expect(result.filePath).toBe('/test/root/.talkcody/tool/task-1/tool_web-fetch.txt');
+      expect(result.content).toContain('saved to');
+      expect(result.content).toContain('grep');
+      expect(result.truncated).toBe(true);
+      expect(result.contentLength).toBe(10001);
+    });
+
+    it('should truncate content when task context is missing', async () => {
+      const longContent = 'b'.repeat(10001);
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: {
+            title: 'Test Page',
+            url: 'https://example.com',
+            content: longContent,
+            publishedDate: null,
+          },
+        }),
+        text: vi.fn(),
+      };
+
+      mockFetchWithTimeout.mockResolvedValue(mockResponse as any);
+
+      const result = await fetchWebContent('https://example.com');
+
+      expect(result.truncated).toBe(true);
+      expect(result.contentLength).toBe(10001);
+      expect(result.content).toContain('Returning first 10000 characters');
+      expect(result.content).toContain(longContent.slice(0, 10000));
     });
 
     it('should fallback to Readability when Jina fails', async () => {

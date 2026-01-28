@@ -662,6 +662,11 @@ export class LLMService {
                 providerOptionsMap.openrouter = {
                   effort: normalizedReasoningEffort,
                 };
+
+                providerOptionsMap.moonshot = {
+                  thinking: { type: 'enabled' },
+                  temperature: 1.0,
+                };
               }
 
               // biome-ignore lint/suspicious/noExplicitAny: providerOptions type varies by provider

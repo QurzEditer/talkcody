@@ -70,6 +70,16 @@ describe('TaskFileService', () => {
       expect(result).toContain('/test/root/.talkcody/output/task-123/tool-456_stdout.log');
     });
 
+    it('should reject unsafe suffix', async () => {
+      mockExists.mockResolvedValue(true);
+
+      const service = TaskFileService.getInstance();
+
+      await expect(
+        service.saveOutput('task-123', 'tool-456', 'test output', '../stdout')
+      ).rejects.toThrow('Invalid file name');
+    });
+
     it('should create directory if it does not exist', async () => {
       mockExists.mockResolvedValue(false);
       mockMkdir.mockResolvedValue(undefined);
@@ -170,6 +180,14 @@ describe('TaskFileService', () => {
       expect(result).toBe('test content');
     });
 
+    it('should reject unsafe suffix', async () => {
+      const service = TaskFileService.getInstance();
+
+      await expect(service.getOutput('task-123', 'tool-456', '../stdout')).rejects.toThrow(
+        'Invalid file name'
+      );
+    });
+
     it('should return null when file does not exist', async () => {
       const error = new Error('File not found');
       error.name = 'JsError';
@@ -204,6 +222,12 @@ describe('TaskFileService', () => {
       expect(result).toBe(true);
     });
 
+    it('should reject unsafe suffix', async () => {
+      const service = TaskFileService.getInstance();
+
+      await expect(service.removeOutput('task-123', 'tool-456', '../stdout')).resolves.toBe(false);
+    });
+
     it('should return false when file does not exist', async () => {
       mockExists.mockResolvedValue(false);
 
@@ -236,6 +260,16 @@ describe('TaskFileService', () => {
       expect(mockWriteTextFile).toHaveBeenCalled();
       expect(result).toContain('.talkcody/plan/task-123/plan.json');
     });
+
+    it('should reject unsafe file names', async () => {
+      mockExists.mockResolvedValue(true);
+
+      const service = TaskFileService.getInstance();
+
+      await expect(
+        service.writeFile('plan', 'task-123', '../escape.json', '{"test": true}')
+      ).rejects.toThrow('Invalid file name');
+    });
   });
 
   describe('readFile', () => {
@@ -248,6 +282,14 @@ describe('TaskFileService', () => {
 
       expect(mockReadTextFile).toHaveBeenCalled();
       expect(result).toBe('file content');
+    });
+
+    it('should reject unsafe file names', async () => {
+      const service = TaskFileService.getInstance();
+
+      await expect(service.readFile('context', 'task-123', '../secret.txt')).rejects.toThrow(
+        'Invalid file name'
+      );
     });
 
     it('should return null when file does not exist', async () => {
@@ -276,7 +318,7 @@ describe('TaskFileService', () => {
       const service = TaskFileService.getInstance();
       await service.cleanupTask('task-123');
 
-      // Should clean up output, plan, and context directories
+      // Should clean up output, plan, context, and tool directories
       expect(mockRemove).toHaveBeenCalled();
     });
 

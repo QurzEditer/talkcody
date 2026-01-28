@@ -28,6 +28,58 @@ export interface ChangelogEntry {
 // Only include the most recent versions that users care about
 export const CHANGELOG_DATA: ChangelogEntry[] = [
   {
+    version: '0.3.2',
+    date: '2026-01-27',
+    en: {
+      added: [
+        {
+          title: 'Ralph Loop (Experimental)',
+          description:
+            'New persistent execution mode supporting AI Agent autonomous iteration for complex tasks. Agents can continue learning across multiple iterations, self-correcting based on execution feedback until completion criteria are met.',
+        },
+        {
+          title: 'Kimi 2.5 Model Support',
+          description: 'Added support for Kimi 2.5 model.',
+        },
+      ],
+      changed: [
+        'Web Fetch Tool Optimization: Improved web content fetching capabilities',
+        'Create Agent Agent Optimization: Improved custom Agent creation experience',
+      ],
+      fixed: [
+        'Fixed tool UI registration related bugs',
+        'Fixed custom tool UI display bugs',
+        'Fixed recent project list bug',
+        'Fixed LLM retry mechanism issues',
+        'Fixed Whats New dialog video Linux platform compatibility issue',
+      ],
+    },
+    zh: {
+      added: [
+        {
+          title: 'Ralph Loop（实验版本）',
+          description:
+            '新增持久化执行模式，支持 AI Agent 自主迭代完成复杂任务。Agent 可以在多次迭代中持续学习，根据执行反馈自我修正，直到满足完成条件。',
+        },
+        {
+          title: 'Kimi 2.5 模型支持',
+          description: '新增对 Kimi 2.5 模型的支持。',
+        },
+      ],
+      changed: [
+        'Web Fetch 工具优化：改进网页内容获取能力',
+        'Create Agent Agent 优化：改进创建自定义 Agent 的体验',
+      ],
+      fixed: [
+        '修复工具 UI 注册相关 Bug',
+        '修复自定义工具 UI 显示 Bug',
+        '修复最近项目列表 Bug',
+        '修复 LLM 重试机制问题',
+        '修复更新日志弹窗视频在 Linux 平台的兼容性问题',
+      ],
+    },
+  },
+  {
     version: '0.3.1',
     date: '2026-01-25',
     en: {

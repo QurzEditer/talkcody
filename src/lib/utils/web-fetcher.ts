@@ -1,25 +1,20 @@
 import { logger } from '@/lib/logger';
+import { taskFileService } from '@/services/task-file-service';
 import { fetchWithTimeout } from '../utils';
 import { readabilityExtractor } from './readability-extractor';
 
-/**
- * Web content fetch result interface
- */
 export interface WebFetchResult {
   title?: string;
   url: string;
   content: string;
   publishedDate?: string | null;
+  filePath?: string;
+  truncated?: boolean;
+  contentLength?: number;
 }
 
-/**
- * Fetch web content using Jina AI Reader API
- * @param url - The URL to fetch
- * @returns Web fetch result
- * @throws Error if fetch fails
- */
 export async function fetchWithJina(url: string): Promise<WebFetchResult> {
-  const accessUrl = `https://r.jina.ai/${url}`;
+  const accessUrl = `https://r.jina.ai/${encodeURIComponent(url)}`;
   logger.info('fetchWithJina:', accessUrl);
 
   const response = await fetchWithTimeout(accessUrl, {
@@ -48,12 +43,6 @@ export async function fetchWithJina(url: string): Promise<WebFetchResult> {
   };
 }
 
-/**
- * Fetch web content using Tavily Extract API
- * @param url - The URL to fetch
- * @returns Web fetch result
- * @throws Error if fetch fails
- */
 export async function fetchWithTavily(url: string): Promise<WebFetchResult> {
   const tavilyExtractUrl = 'https://api.tavily.com/extract';
   logger.info('fetchWithTavily:', url);
@@ -101,21 +90,80 @@ export async function fetchWithTavily(url: string): Promise<WebFetchResult> {
   throw new Error('No results returned from Tavily API');
 }
 
-/**
- * Validate URL format
- * @param url - The URL to validate
- * @throws Error if URL is invalid
- */
 function validateUrl(url: string): void {
   if (!url?.startsWith('http')) {
     throw new Error('Invalid URL provided. URL must start with http or https');
   }
 }
 
-export async function fetchWebContent(url: string): Promise<WebFetchResult> {
-  // Validate URL
+const MAX_INLINE_CONTENT_LENGTH = 10000;
+
+function truncateContent(content: string): string {
+  return content.slice(0, MAX_INLINE_CONTENT_LENGTH);
+}
+
+function sanitizeFileName(fileName: string): string {
+  const safeName = fileName || 'web-fetch';
+  return safeName
+    .replace(/[<>:"/\\|?*]/g, '_')
+    .replace(/\.\./g, '_')
+    .trim();
+}
+
+function buildLargeContentMessage(filePath: string, contentLength: number): string {
+  return [
+    `Content is ${contentLength} characters and was saved to: ${filePath}.`,
+    'You can use shell tools like `grep`, `less`, or `tail` to inspect the file.',
+  ].join('\n');
+}
+
+async function handleLargeContent(
+  result: WebFetchResult,
+  context?: { taskId?: string; toolId?: string }
+): Promise<WebFetchResult> {
+  const contentLength = result.content.length;
+  if (contentLength <= MAX_INLINE_CONTENT_LENGTH) {
+    return { ...result, contentLength };
+  }
+
+  const taskId = context?.taskId;
+  const toolId = context?.toolId;
+  if (!taskId || !toolId) {
+    const truncatedContent = truncateContent(result.content);
+    return {
+      ...result,
+      content: [
+        `Content is ${contentLength} characters. Returning first ${MAX_INLINE_CONTENT_LENGTH} characters.`,
+        truncatedContent,
+      ].join('\n\n'),
+      truncated: true,
+      contentLength,
+    };
+  }
+
+  const fileName = sanitizeFileName(`${toolId}_web-fetch.txt`);
+  const filePath = await taskFileService.writeFile('tool', taskId, fileName, result.content);
+
+  return {
+    ...result,
+    content: buildLargeContentMessage(filePath, contentLength),
+    filePath,
+    truncated: true,
+    contentLength,
+  };
+}
+
+export async function fetchWebContent(
+  url: string,
+  context?: { taskId?: string; toolId?: string }
+): Promise<WebFetchResult> {
   validateUrl(url);
 
+  const result = await fetchWebContentInternal(url);
+  return await handleLargeContent(result, context);
+}
+
+async function fetchWebContentInternal(url: string): Promise<WebFetchResult> {
   // Try Jina AI first
   try {
     logger.info('Attempting to fetch with Jina AI:', url);

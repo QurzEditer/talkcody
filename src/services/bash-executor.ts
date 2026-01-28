@@ -599,12 +599,6 @@ export class BashExecutor {
     return { allowed: true };
   }
 
-  /**
-   * Execute a bash command safely
-   * @param command - The bash command to execute
-   * @param taskId - The task ID for workspace root resolution
-   * @param toolUseId - Optional tool use ID for output file naming
-   */
   async execute(command: string, taskId: string, toolId: string): Promise<BashResult> {
     return this.executeWithTimeout(command, taskId, toolId, 300000, 60000);
   }

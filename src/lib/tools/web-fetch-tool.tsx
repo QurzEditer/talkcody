@@ -11,8 +11,8 @@ export const webFetchTool = createTool({
     url: z.string().describe('The URL of the web page to fetch'),
   }),
   canConcurrent: true,
-  execute: async ({ url }) => {
-    return await fetchWebContent(url);
+  execute: async ({ url }, context) => {
+    return await fetchWebContent(url, context);
   },
   renderToolDoing: ({ url }) => (
     <GenericToolDoing operation="fetch" target={url} details="Fetching web content" />
