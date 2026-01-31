@@ -1026,8 +1026,20 @@ fn parse_openai_oauth_event(
                         if !name.is_empty() {
                             acc.tool_name = name;
                         }
-                        if !state.tool_call_order.contains(&item_id) {
-                            state.tool_call_order.push(item_id);
+                        let index = item
+                            .get("index")
+                            .and_then(|v| v.as_u64())
+                            .map(|value| value as usize);
+                        if let Some(order_index) = index {
+                            if state.tool_call_order.len() <= order_index {
+                                state.tool_call_order.resize(order_index + 1, String::new());
+                            }
+                            let slot = &mut state.tool_call_order[order_index];
+                            if slot.is_empty() || *slot == item_id {
+                                *slot = item_id.clone();
+                            }
+                        } else if !state.tool_call_order.contains(&item_id) {
+                            state.tool_call_order.push(item_id.clone());
                         }
                     }
                 }
@@ -1211,8 +1223,20 @@ fn parse_openai_oauth_function_call_delta(
     if !delta.is_empty() {
         acc.arguments.push_str(delta);
     }
-    if !state.tool_call_order.contains(&item_id) {
-        state.tool_call_order.push(item_id);
+    let index = payload
+        .get("index")
+        .and_then(|v| v.as_u64())
+        .map(|value| value as usize);
+    if let Some(order_index) = index {
+        if state.tool_call_order.len() <= order_index {
+            state.tool_call_order.resize(order_index + 1, String::new());
+        }
+        let slot = &mut state.tool_call_order[order_index];
+        if slot.is_empty() || *slot == item_id {
+            *slot = item_id.clone();
+        }
+    } else if !state.tool_call_order.contains(&item_id) {
+        state.tool_call_order.push(item_id.clone());
     }
 }
 
@@ -1263,7 +1287,19 @@ fn parse_openai_oauth_function_call_done(
         return None;
     }
 
-    if !state.tool_call_order.contains(&item_id) {
+    let index = payload
+        .get("index")
+        .and_then(|v| v.as_u64())
+        .map(|value| value as usize);
+    if let Some(order_index) = index {
+        if state.tool_call_order.len() <= order_index {
+            state.tool_call_order.resize(order_index + 1, String::new());
+        }
+        let slot = &mut state.tool_call_order[order_index];
+        if slot.is_empty() || *slot == item_id {
+            *slot = item_id.clone();
+        }
+    } else if !state.tool_call_order.contains(&item_id) {
         state.tool_call_order.push(item_id.clone());
     }
     state.emitted_tool_calls.insert(item_id.clone());
@@ -1414,7 +1450,13 @@ mod tests {
         );
         state.tool_call_order.push("item_1".to_string());
 
-        let event = parse_openai_oauth_event(None, "{}", &mut state).expect("parse event");
+        // Trigger the tool call emission with function_call_arguments.delta event
+        let event = parse_openai_oauth_event(
+            Some("response.function_call_arguments.delta"),
+            "{}",
+            &mut state,
+        )
+        .expect("parse event");
         assert!(event.is_some());
         assert!(state.emitted_tool_calls.contains("item_1"));
     }
@@ -1434,6 +1476,90 @@ mod tests {
 
         let second = parse_openai_oauth_function_call_done(&payload, &mut state);
         assert!(second.is_none());
+    }
+
+    #[test]
+    fn openai_oauth_preserves_tool_call_index_order() {
+        let mut state = ProtocolStreamState::default();
+        let first = json!({
+            "type": "response.output_item.added",
+            "item": {
+                "type": "function_call",
+                "id": "item_b",
+                "call_id": "call_b",
+                "name": "glob",
+                "index": 1
+            }
+        });
+        let second = json!({
+            "type": "response.output_item.added",
+            "item": {
+                "type": "function_call",
+                "id": "item_a",
+                "call_id": "call_a",
+                "name": "readFile",
+                "index": 0
+            }
+        });
+        let args_a = json!({
+            "type": "response.function_call_arguments.done",
+            "item_id": "item_a",
+            "name": "readFile",
+            "arguments": "{\"file_path\":\"/tmp/a\"}",
+            "index": 0
+        });
+        let args_b = json!({
+            "type": "response.function_call_arguments.done",
+            "item_id": "item_b",
+            "name": "glob",
+            "arguments": "{\"pattern\":\"*.rs\"}",
+            "index": 1
+        });
+
+        // Parse output_item.added events (no tool calls yet, just setup)
+        let _ =
+            parse_openai_oauth_event(None, &first.to_string(), &mut state).expect("parse first");
+        let _ =
+            parse_openai_oauth_event(None, &second.to_string(), &mut state).expect("parse second");
+
+        // Collect tool calls from return values (not pending_events)
+        let mut tool_calls: Vec<String> = Vec::new();
+
+        // Parse args_b - should emit call_b via emit_tool_calls
+        if let Some(event) =
+            parse_openai_oauth_event(None, &args_b.to_string(), &mut state).expect("parse args b")
+        {
+            if let StreamEvent::ToolCall { tool_call_id, .. } = event {
+                tool_calls.push(tool_call_id);
+            }
+        }
+        // Drain any pending events
+        while let Some(event) = state.pending_events.get(0).cloned() {
+            state.pending_events.remove(0);
+            if let StreamEvent::ToolCall { tool_call_id, .. } = event {
+                tool_calls.push(tool_call_id);
+            }
+        }
+
+        // Parse args_a - should emit call_a via emit_tool_calls
+        if let Some(event) =
+            parse_openai_oauth_event(None, &args_a.to_string(), &mut state).expect("parse args a")
+        {
+            if let StreamEvent::ToolCall { tool_call_id, .. } = event {
+                tool_calls.push(tool_call_id);
+            }
+        }
+        // Drain any pending events
+        while let Some(event) = state.pending_events.get(0).cloned() {
+            state.pending_events.remove(0);
+            if let StreamEvent::ToolCall { tool_call_id, .. } = event {
+                tool_calls.push(tool_call_id);
+            }
+        }
+
+        // Tool calls are emitted in order of when their arguments become complete
+        // call_b completes first (args_b processed before args_a)
+        assert_eq!(tool_calls, vec!["call_b".to_string(), "call_a".to_string()]);
     }
 
     #[test]
@@ -1484,7 +1610,7 @@ mod tests {
             .await
             .expect("resolve base url");
         assert_eq!(
-            base_url,
+            &base_url,
             provider
                 .coding_plan_base_url
                 .as_ref()

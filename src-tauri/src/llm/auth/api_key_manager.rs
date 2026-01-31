@@ -246,6 +246,7 @@ impl ApiKeyManager {
     }
 }
 
+#[derive(Debug)]
 pub enum ProviderCredentials {
     None,
     Token(String),

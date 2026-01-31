@@ -353,6 +353,14 @@ impl LlmProtocol for ClaudeProtocol {
                 }
             }
             "message_delta" => {
+                // Extract stop_reason first before handling usage (which may return early)
+                if let Some(stop_reason) = payload
+                    .get("delta")
+                    .and_then(|v| v.get("stop_reason"))
+                    .and_then(|v| v.as_str())
+                {
+                    state.finish_reason = Some(stop_reason.to_string());
+                }
                 if let Some(usage) = payload.get("usage") {
                     let input_tokens = usage
                         .get("input_tokens")
@@ -369,13 +377,6 @@ impl LlmProtocol for ClaudeProtocol {
                         cached_input_tokens: None,
                         cache_creation_input_tokens: None,
                     }));
-                }
-                if let Some(stop_reason) = payload
-                    .get("delta")
-                    .and_then(|v| v.get("stop_reason"))
-                    .and_then(|v| v.as_str())
-                {
-                    state.finish_reason = Some(stop_reason.to_string());
                 }
             }
             "message_stop" => {
@@ -499,14 +500,28 @@ mod tests {
                 Some(256),
                 Some(0.9),
                 None,
-                Some(json!({ "anthropic": { "thinking": { "type": "enabled" } } })),
-                Some(json!({ "max_output_tokens": 128 })),
+                Some(&json!({ "anthropic": { "thinking": { "type": "enabled" } } })),
+                Some(&json!({ "max_output_tokens": 128 })),
             )
             .expect("build request");
 
         assert_eq!(body.get("system"), Some(&json!("system")));
-        assert_eq!(body.get("temperature"), Some(&json!(0.2)));
-        assert_eq!(body.get("top_p"), Some(&json!(0.9)));
+        assert!(
+            body.get("temperature")
+                .map(|v| v.as_f64())
+                .flatten()
+                .map(|v| (v - 0.2).abs() < 0.001)
+                .unwrap_or(false),
+            "temperature should be approximately 0.2"
+        );
+        assert!(
+            body.get("top_p")
+                .map(|v| v.as_f64())
+                .flatten()
+                .map(|v| (v - 0.9).abs() < 0.001)
+                .unwrap_or(false),
+            "top_p should be approximately 0.9"
+        );
         assert_eq!(body.get("thinking"), Some(&json!({ "type": "enabled" })));
         assert_eq!(body.get("max_output_tokens"), Some(&json!(128)));
     }

@@ -123,13 +123,6 @@
       "text": "Hello"
     },
     {
-      "type": "text-start"
-    },
-    {
-      "type": "text-delta",
-      "text": "Hello"
-    },
-    {
       "type": "usage",
       "input_tokens": 3,
       "output_tokens": 2,

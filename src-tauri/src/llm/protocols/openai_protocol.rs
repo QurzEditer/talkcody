@@ -304,8 +304,20 @@ impl OpenAiProtocol {
                 }
             }
 
-            if !state.tool_call_order.contains(&key) {
-                state.tool_call_order.push(key);
+            if let Some(order_index) = index.map(|value| value as usize) {
+                if state.tool_call_order.len() <= order_index {
+                    state.tool_call_order.resize(order_index + 1, String::new());
+                }
+                let placeholder = order_index.to_string();
+                let slot = &mut state.tool_call_order[order_index];
+                if slot.is_empty()
+                    || *slot == placeholder
+                    || (!tool_call_id.is_empty() && *slot != key)
+                {
+                    *slot = key.clone();
+                }
+            } else if !state.tool_call_order.contains(&key) {
+                state.tool_call_order.push(key.clone());
             }
         }
     }
@@ -560,11 +572,11 @@ mod tests {
                 Some(120),
                 None,
                 None,
-                Some(json!({
+                Some(&json!({
                     "openai": { "reasoningEffort": "medium" },
                     "openrouter": { "effort": "low" }
                 })),
-                Some(json!({ "extra_param": true })),
+                Some(&json!({ "extra_param": true })),
             )
             .expect("build request");
 
@@ -629,6 +641,84 @@ mod tests {
             }
             _ => panic!("Unexpected event"),
         }
+    }
+
+    #[test]
+    fn parse_stream_preserves_tool_call_index_order() {
+        let protocol = OpenAiProtocol;
+        let mut state = ProtocolStreamState::default();
+
+        let first = json!({
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "index": 1,
+                        "id": "call_b",
+                        "function": { "name": "glob", "arguments": "{\"pattern\":\"*.rs\"}" }
+                    }]
+                }
+            }]
+        });
+        let second = json!({
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "index": 0,
+                        "id": "call_a",
+                        "function": { "name": "readFile", "arguments": "{\"file_path\":\"/tmp\"}" }
+                    }]
+                }
+            }]
+        });
+        let done = json!({
+            "choices": [{ "finish_reason": "tool_calls", "delta": {} }]
+        });
+
+        let mut events: Vec<StreamEvent> = Vec::new();
+
+        let parsed = protocol
+            .parse_stream_event(None, &first.to_string(), &mut state)
+            .expect("parse first");
+        if let Some(event) = parsed {
+            events.push(event);
+        }
+        while let Some(pending) = state.pending_events.get(0).cloned() {
+            state.pending_events.remove(0);
+            events.push(pending);
+        }
+
+        let parsed = protocol
+            .parse_stream_event(None, &second.to_string(), &mut state)
+            .expect("parse second");
+        if let Some(event) = parsed {
+            events.push(event);
+        }
+        while let Some(pending) = state.pending_events.get(0).cloned() {
+            state.pending_events.remove(0);
+            events.push(pending);
+        }
+
+        state.text_started = true;
+        let parsed = protocol
+            .parse_stream_event(None, &done.to_string(), &mut state)
+            .expect("parse done");
+        if let Some(event) = parsed {
+            events.push(event);
+        }
+        while let Some(pending) = state.pending_events.get(0).cloned() {
+            state.pending_events.remove(0);
+            events.push(pending);
+        }
+
+        let tool_calls: Vec<String> = events
+            .iter()
+            .filter_map(|event| match event {
+                StreamEvent::ToolCall { tool_call_id, .. } => Some(tool_call_id.clone()),
+                _ => None,
+            })
+            .collect();
+
+        assert_eq!(tool_calls, vec!["call_a".to_string(), "call_b".to_string()]);
     }
 
     #[test]

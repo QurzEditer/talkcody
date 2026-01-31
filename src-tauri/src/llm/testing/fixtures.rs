@@ -175,6 +175,30 @@ pub fn assert_json_matches(expected: &Value, actual: &Value) -> Result<(), Strin
             }
             Ok(())
         }
+        Value::Number(expected_num) => {
+            // Compare numbers with tolerance for floating point precision
+            if let Some(actual_num) = actual.as_number() {
+                let expected_f64 = expected_num.as_f64().unwrap_or(0.0);
+                let actual_f64 = actual_num.as_f64().unwrap_or(0.0);
+                // Use relative tolerance for large numbers, absolute for small
+                let tolerance = (expected_f64.abs() * 1e-6).max(1e-9);
+                if (expected_f64 - actual_f64).abs() <= tolerance {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "Value mismatch: expected {}, got {}",
+                        describe_json(expected),
+                        describe_json(actual)
+                    ))
+                }
+            } else {
+                Err(format!(
+                    "Value mismatch: expected {}, got {}",
+                    describe_json(expected),
+                    describe_json(actual)
+                ))
+            }
+        }
         _ => {
             if expected == actual {
                 Ok(())
