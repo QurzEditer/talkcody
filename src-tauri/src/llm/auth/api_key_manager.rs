@@ -255,11 +255,10 @@ impl ApiKeyManager {
         match provider_id {
             "openai" => self.get_setting("openai_oauth_access_token").await,
             "anthropic" => self.get_setting("claude_oauth_access_token").await,
-            "github_copilot" => self
-                .get_valid_github_copilot_token()
-                .await
-                .map(Some)
-                .or_else(|_| self.get_setting(GITHUB_COPILOT_COPILOT_TOKEN_KEY).await),
+            "github_copilot" => match self.get_valid_github_copilot_token().await {
+                Ok(token) => Ok(Some(token)),
+                Err(_) => self.get_setting(GITHUB_COPILOT_COPILOT_TOKEN_KEY).await,
+            },
             "qwen_code" => Ok(None),
             _ => Ok(None),
         }
@@ -304,7 +303,12 @@ impl ApiKeyManager {
             .as_deref()
             .map(normalize_domain)
             .unwrap_or_else(|| "github.com".to_string());
-        let token_url = format!("https://api.{}/copilot_internal/v2/token", base_domain);
+
+        let token_url = if let Ok(override_url) = std::env::var("TALKCODY_COPILOT_TOKEN_URL") {
+            override_url
+        } else {
+            format!("https://api.{}/copilot_internal/v2/token", base_domain)
+        };
 
         let response = client
             .get(&token_url)
@@ -403,6 +407,14 @@ impl ApiKeyManager {
     }
 }
 
+fn normalize_domain(url: &str) -> String {
+    url.trim()
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .trim_end_matches('/')
+        .to_string()
+}
+
 #[derive(Debug)]
 pub enum ProviderCredentials {
     None,
@@ -467,36 +479,74 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn load_models_config_uses_cache() {
+    async fn github_copilot_refreshes_expired_token() {
         let ctx = setup().await;
+        let server = tiny_http::Server::http("127.0.0.1:0").expect("server");
+        let addr = server.server_addr();
+        let (ip, port) = match addr {
+            tiny_http::ListenAddr::IP(socket_addr) => (socket_addr.ip(), socket_addr.port()),
+            _ => panic!("Expected IP SocketAddr"),
+        };
+        let token_url = format!("http://{}:{}/copilot_internal/v2/token", ip, port);
 
-        // First call - should load from source and populate cache
-        let config1 = ctx
-            .api_keys
-            .load_models_config()
+        std::env::set_var("TALKCODY_COPILOT_TOKEN_URL", &token_url);
+
+        let response_token = "new-copilot-token";
+        let response_expires = chrono::Utc::now().timestamp() + 3600;
+        let response_body = format!(
+            "{{\"token\":\"{}\",\"expires_at\":{}}}",
+            response_token, response_expires
+        );
+
+        let server_handle = std::thread::spawn(move || {
+            if let Ok(request) = server.recv() {
+                let response = tiny_http::Response::from_string(response_body).with_header(
+                    tiny_http::Header::from_bytes(&b"Content-Type"[..], &b"application/json"[..])
+                        .expect("header"),
+                );
+                let _ = request.respond(response);
+            }
+        });
+
+        ctx.api_keys
+            .set_setting(GITHUB_COPILOT_ACCESS_TOKEN_KEY, "access-token")
             .await
-            .expect("load config");
-
-        // Second call - should return cached version
-        let config2 = ctx
-            .api_keys
-            .load_models_config()
+            .expect("set access token");
+        ctx.api_keys
+            .set_setting(GITHUB_COPILOT_COPILOT_TOKEN_KEY, "old-token")
             .await
-            .expect("load config from cache");
-
-        assert_eq!(config1.version, config2.version);
-
-        // Clear cache and verify it loads again
-        ctx.api_keys.clear_models_cache().await;
-
-        // After clearing cache, should load from source again
-        let config3 = ctx
-            .api_keys
-            .load_models_config()
+            .expect("set copilot token");
+        ctx.api_keys
+            .set_setting(GITHUB_COPILOT_EXPIRES_AT_KEY, "0")
             .await
-            .expect("load config after clear");
+            .expect("set expired timestamp");
 
-        assert_eq!(config1.version, config3.version);
+        let refreshed = ctx
+            .api_keys
+            .get_valid_github_copilot_token()
+            .await
+            .expect("refresh token");
+
+        assert_eq!(refreshed, response_token);
+
+        let stored_token = ctx
+            .api_keys
+            .get_setting(GITHUB_COPILOT_COPILOT_TOKEN_KEY)
+            .await
+            .expect("read stored token")
+            .unwrap_or_default();
+        assert_eq!(stored_token, response_token);
+
+        let stored_expires = ctx
+            .api_keys
+            .get_setting(GITHUB_COPILOT_EXPIRES_AT_KEY)
+            .await
+            .expect("read expires")
+            .unwrap_or_default();
+        assert_eq!(stored_expires, (response_expires * 1000).to_string());
+
+        server_handle.join().expect("server join");
+        std::env::remove_var("TALKCODY_COPILOT_TOKEN_URL");
     }
 
     fn provider_config(id: &str, auth_type: AuthType, supports_oauth: bool) -> ProviderConfig {

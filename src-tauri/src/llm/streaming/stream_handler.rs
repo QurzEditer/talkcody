@@ -226,6 +226,22 @@ impl StreamHandler {
             provider.headers.as_ref(),
         );
 
+        if provider.id == "github_copilot" {
+            headers.insert(
+                "User-Agent".to_string(),
+                "GitHubCopilotChat/0.35.0".to_string(),
+            );
+            headers.insert("Editor-Version".to_string(), "vscode/1.105.1".to_string());
+            headers.insert(
+                "Editor-Plugin-Version".to_string(),
+                "copilot-chat/0.35.0".to_string(),
+            );
+            headers.insert(
+                "Copilot-Integration-Id".to_string(),
+                "vscode-chat".to_string(),
+            );
+        }
+
         if provider.id == "moonshot" && provider.supports_coding_plan {
             if let Some(use_coding_plan) = self
                 .api_keys

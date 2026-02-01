@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -112,7 +112,7 @@ export function LLMTracingPage() {
   const [loadingList, setLoadingList] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSpans, setExpandedSpans] = useState<Set<string>>(new Set());
+  const [expandedSpans, setExpandedSpans] = useState<Set<string>>(() => new Set());
 
   const loadTraces = useCallback(async () => {
     setLoadingList(true);
@@ -142,9 +142,12 @@ export function LLMTracingPage() {
       try {
         const result = await databaseService.getTraceDetails(traceId);
         setDetail(result);
-        // Expand all spans by default
+        // Expand root spans by default to reduce initial render cost.
         if (result?.spans) {
-          setExpandedSpans(new Set(result.spans.map((s) => s.id)));
+          const rootSpanIds = result.spans
+            .filter((span) => !span.parentSpanId)
+            .map((span) => span.id);
+          setExpandedSpans(new Set(rootSpanIds));
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : t.Tracing.loadError;
@@ -231,27 +234,34 @@ export function LLMTracingPage() {
     }
 
     return (
-      <div className="space-y-2 p-3">
+      <div className="space-y-1 p-2">
         {traces.map((trace) => {
           const isSelected = trace.id === selectedTraceId;
           return (
             <button
               key={trace.id}
               type="button"
-              className={`w-full rounded border px-3 py-2 text-left transition ${
+              className={`w-full rounded-lg border px-3 py-2.5 text-left transition-all duration-200 ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-950 dark:text-blue-200'
-                  : 'border-transparent hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-800 dark:hover:bg-gray-900'
+                  ? 'border-blue-500/50 bg-gradient-to-r from-blue-500/10 to-blue-500/5 text-blue-700 shadow-sm dark:border-blue-400/50 dark:from-blue-500/20 dark:to-blue-500/10 dark:text-blue-200'
+                  : 'border-transparent hover:border-gray-200 hover:bg-gray-50/80 dark:hover:border-gray-800 dark:hover:bg-gray-900/80'
               }`}
               onClick={() => setSelectedTraceId(trace.id)}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-mono text-xs">{trace.id}</span>
-                <Badge variant="secondary">{trace.spanCount} spans</Badge>
+                <span className="truncate font-mono text-xs text-foreground">{trace.id}</span>
+                <Badge
+                  variant={isSelected ? 'default' : 'secondary'}
+                  className="text-[10px] px-1.5 py-0 h-5 shrink-0"
+                >
+                  {trace.spanCount} spans
+                </Badge>
               </div>
-              <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                <span>{formatTimestamp(trace.startedAt)}</span>
-                <span>{formatDuration(trace.startedAt, trace.endedAt)}</span>
+              <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span className="truncate">{formatTimestamp(trace.startedAt)}</span>
+                <span className="shrink-0 ml-2 font-medium">
+                  {formatDuration(trace.startedAt, trace.endedAt)}
+                </span>
               </div>
             </button>
           );
@@ -271,52 +281,56 @@ export function LLMTracingPage() {
       return (
         <div key={span.id} className="select-none">
           <div
-            className="flex items-center gap-1 py-1 px-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded cursor-pointer"
-            style={{ paddingLeft: `${node.depth * 20 + 8}px` }}
+            className="flex items-center gap-1.5 py-1.5 px-2 hover:bg-accent/60 rounded-md cursor-pointer transition-colors group"
+            style={{ paddingLeft: `${node.depth * 16 + 8}px` }}
             onClick={() => toggleSpanExpanded(span.id)}
           >
             {hasChildren ? (
               isExpanded ? (
-                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground transition-transform" />
               )
             ) : (
-              <span className="w-4" />
+              <span className="w-3.5" />
             )}
-            <span className="text-sm font-medium">{getSpanLabel(span)}</span>
-            <Badge variant="outline" className="ml-2 text-xs">
+            <span className="text-xs font-medium text-foreground">{getSpanLabel(span)}</span>
+            <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 h-4">
               {formatDuration(span.startedAt, span.endedAt)}
             </Badge>
           </div>
           {isExpanded && (
-            <div className="mt-1">
-              <Card className="ml-4">
-                <CardHeader className="py-3">
-                  <CardDescription className="font-mono text-xs">{span.id}</CardDescription>
-                  <div className="text-xs text-muted-foreground">
+            <div className="mt-1 animate-in slide-in-from-top-1 duration-150">
+              <Card className="ml-5 border-muted shadow-sm">
+                <CardHeader className="py-2.5 px-3 space-y-1">
+                  <CardDescription className="font-mono text-[10px] text-muted-foreground">
+                    {span.id}
+                  </CardDescription>
+                  <div className="text-[11px] text-muted-foreground">
                     Started: {formatTimestamp(span.startedAt)}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3 pt-0">
+                <CardContent className="space-y-3 pt-0 px-3 pb-3">
                   {span.attributes && Object.keys(span.attributes).length > 0 && (
                     <div>
-                      <div className="text-xs font-semibold text-muted-foreground mb-1">
+                      <div className="text-[11px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
                         {t.Tracing.attributesLabel}
                       </div>
-                      <pre className="max-h-48 overflow-auto rounded bg-gray-50 p-3 text-xs dark:bg-gray-900">
+                      <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2.5 text-[11px]">
                         {formatJsonPreview(span.attributes)}
                       </pre>
                     </div>
                   )}
                   <div>
-                    <div className="text-xs font-semibold text-muted-foreground mb-1">
+                    <div className="text-[11px] font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">
                       {t.Tracing.eventsTitle} ({events.length})
                     </div>
                     {events.length === 0 ? (
-                      <div className="text-xs text-muted-foreground">{t.Tracing.noEvents}</div>
+                      <div className="text-[11px] text-muted-foreground py-2">
+                        {t.Tracing.noEvents}
+                      </div>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {events.map((event) => (
                           <TraceEventRow key={event.id} event={event} />
                         ))}
@@ -334,15 +348,8 @@ export function LLMTracingPage() {
     [expandedSpans, spanEventsMap, t.Tracing, toggleSpanExpanded]
   );
 
-  // Render timeline view
-  const renderTimelineView = useCallback(() => {
-    if (!detail?.spans?.length || !timelineBounds) {
-      return <div className="p-6 text-sm text-muted-foreground">{t.Tracing.noSpans}</div>;
-    }
-
-    const { start, duration } = timelineBounds;
-
-    // Flatten spans for timeline (show all spans, not just roots)
+  const allSpans = useMemo(() => {
+    if (!spanTree.length) return [];
     const flattenSpans = (nodes: SpanNode[], result: SpanNode[] = []) => {
       for (const node of nodes) {
         result.push(node);
@@ -350,17 +357,29 @@ export function LLMTracingPage() {
       }
       return result;
     };
-    const allSpans = flattenSpans(spanTree);
+
+    return flattenSpans(spanTree);
+  }, [spanTree]);
+
+  // Render timeline view
+  const renderTimelineView = useCallback(() => {
+    if (!detail?.spans?.length || !timelineBounds) {
+      return (
+        <div className="py-8 text-sm text-muted-foreground text-center">{t.Tracing.noSpans}</div>
+      );
+    }
+
+    const { start, duration } = timelineBounds;
 
     return (
       <div className="space-y-4">
-        <div className="relative">
+        <div className="relative bg-muted/30 rounded-lg p-3">
           {/* Time markers */}
-          <div className="relative h-6 border-b border-gray-200 dark:border-gray-800 mb-2">
+          <div className="relative h-5 border-b border-border mb-3">
             {[0, 25, 50, 75, 100].map((pct) => (
               <div
                 key={pct}
-                className="absolute text-xs text-muted-foreground transform -translate-x-1/2"
+                className="absolute text-[10px] text-muted-foreground transform -translate-x-1/2"
                 style={{ left: `${pct}%` }}
               >
                 {formatDurationMs((duration * pct) / 100)}
@@ -369,7 +388,7 @@ export function LLMTracingPage() {
           </div>
 
           {/* Span bars */}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {allSpans.map((node) => {
               const span = node.span;
               const spanStart = span.startedAt - start;
@@ -380,15 +399,18 @@ export function LLMTracingPage() {
               return (
                 <div
                   key={span.id}
-                  className="flex items-center gap-2 py-1 hover:bg-gray-50 dark:hover:bg-gray-900"
-                  style={{ paddingLeft: `${node.depth * 16}px` }}
+                  className="flex items-center gap-2 py-1 hover:bg-accent/50 rounded transition-colors"
+                  style={{ paddingLeft: `${node.depth * 12}px` }}
                 >
-                  <div className="w-32 truncate text-xs" title={getSpanLabel(span)}>
+                  <div
+                    className="w-28 truncate text-[11px] font-medium text-foreground"
+                    title={getSpanLabel(span)}
+                  >
                     {getSpanLabel(span)}
                   </div>
-                  <div className="flex-1 relative h-6 bg-gray-100 dark:bg-gray-800 rounded overflow-hidden">
+                  <div className="flex-1 relative h-5 bg-muted rounded-full overflow-hidden">
                     <div
-                      className="absolute h-full bg-blue-500 rounded transition-all"
+                      className="absolute h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all shadow-sm"
                       style={{
                         left: `${Math.min(leftPercent, 100)}%`,
                         width: `${Math.min(widthPercent, 100 - leftPercent)}%`,
@@ -396,7 +418,7 @@ export function LLMTracingPage() {
                       title={`${getSpanLabel(span)}: ${formatDurationMs(spanDuration)}`}
                     />
                   </div>
-                  <div className="w-16 text-xs text-muted-foreground text-right">
+                  <div className="w-14 text-[10px] text-muted-foreground text-right font-medium">
                     {formatDurationMs(spanDuration)}
                   </div>
                 </div>
@@ -406,9 +428,11 @@ export function LLMTracingPage() {
         </div>
 
         {/* Span details */}
-        <div className="mt-6">
-          <h4 className="text-sm font-semibold mb-3">{t.Tracing.spansTitle}</h4>
-          <div className="space-y-2">{spanTree.map((node) => renderSpanNode(node))}</div>
+        <div className="mt-4">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            {t.Tracing.spansTitle}
+          </h4>
+          <div className="space-y-1">{spanTree.map((node) => renderSpanNode(node))}</div>
         </div>
       </div>
     );
@@ -417,8 +441,9 @@ export function LLMTracingPage() {
     timelineBounds,
     t.Tracing.noSpans,
     t.Tracing.spansTitle,
-    spanTree,
+    allSpans,
     renderSpanNode,
+    spanTree,
   ]);
 
   const detailContent = useMemo(() => {
@@ -439,92 +464,118 @@ export function LLMTracingPage() {
     const endedAt = traceTiming?.endedAt ?? selectedTrace.endedAt;
 
     return (
-      <div className="space-y-6 p-6">
+      <div className="mx-auto w-full max-w-6xl space-y-5 p-4">
         {/* Trace Header */}
-        <div>
-          <h2 className="text-lg font-semibold">{t.Tracing.detailTitle}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{selectedTrace.id}</p>
-          <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-            <div>
-              <span className="font-medium text-foreground">{t.Tracing.startedAtLabel}:</span>{' '}
-              {formatTimestamp(startedAt)}
+        <div className="bg-gradient-to-br from-card to-card/80 rounded-xl border p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-semibold text-foreground">{t.Tracing.detailTitle}</h2>
+              <p className="mt-1 font-mono text-xs text-muted-foreground truncate">
+                {selectedTrace.id}
+              </p>
             </div>
-            <div>
-              <span className="font-medium text-foreground">{t.Tracing.durationLabel}:</span>{' '}
-              {formatDuration(startedAt, endedAt ?? null)}
+            <Badge variant="outline" className="shrink-0 text-xs">
+              {selectedTrace.spanCount} spans
+            </Badge>
+          </div>
+          <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-foreground">
+                {t.Tracing.startedAtLabel}:
+              </span>
+              <span className="text-xs">{formatTimestamp(startedAt)}</span>
             </div>
-            <div>
-              <span className="font-medium text-foreground">{t.Tracing.spanCountLabel}:</span>{' '}
-              {selectedTrace.spanCount}
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-foreground">
+                {t.Tracing.durationLabel}:
+              </span>
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                {formatDuration(startedAt, endedAt ?? null)}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Span Content */}
-        <div>
-          <h3 className="text-base font-semibold mb-3">{t.Tracing.spansTitle}</h3>
-          {detail?.spans.length ? (
-            renderTimelineView()
-          ) : (
-            <div className="text-sm text-muted-foreground">{t.Tracing.noSpans}</div>
-          )}
+        <div className="bg-card rounded-xl border shadow-sm">
+          <div className="border-b px-4 py-3">
+            <h3 className="text-sm font-semibold">{t.Tracing.spansTitle}</h3>
+          </div>
+          <div className="p-4">
+            {detail?.spans.length ? (
+              renderTimelineView()
+            ) : (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                {t.Tracing.noSpans}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
   }, [detail, loadingDetail, selectedTrace, traceTiming, renderTimelineView, t.Tracing]);
 
   return (
-    <div className="flex h-full flex-col bg-white dark:bg-gray-950">
-      <div className="flex items-center justify-between border-b px-6 py-4">
+    <div className="flex h-full flex-col bg-background">
+      <div className="flex items-center justify-between border-b bg-card px-4 py-3">
         <div>
-          <h1 className="text-2xl font-bold">{t.Tracing.title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t.Tracing.description}</p>
+          <h1 className="text-xl font-bold">{t.Tracing.title}</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t.Tracing.description}</p>
         </div>
-        <Button onClick={loadTraces} disabled={loadingList}>
+        <Button onClick={loadTraces} disabled={loadingList} size="sm">
           {t.Common.refresh}
         </Button>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-full max-w-sm border-r">
-          <Card className="h-full rounded-none border-0">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{t.Tracing.listTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ScrollArea className="h-[calc(100vh-180px)]">{traceListContent}</ScrollArea>
-            </CardContent>
-          </Card>
+        <div className="w-80 min-w-[320px] max-w-[400px] border-r bg-card/50">
+          <div className="h-full flex flex-col">
+            <div className="border-b px-3 py-2.5 bg-card">
+              <h2 className="text-sm font-semibold text-foreground">{t.Tracing.listTitle}</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {traces.length} trace{traces.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+            <ScrollArea className="flex-1">{traceListContent}</ScrollArea>
+          </div>
         </div>
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-140px)]">{detailContent}</ScrollArea>
+        <div className="flex-1 overflow-hidden bg-background">
+          <ScrollArea className="h-full">{detailContent}</ScrollArea>
         </div>
       </div>
     </div>
   );
 }
 
-function TraceEventRow({ event }: { event: SpanEventRecord }) {
+const TraceEventRow = memo(function TraceEventRow({ event }: { event: SpanEventRecord }) {
   const showFullPayload = shouldShowFullPayload(event);
   const payloadPreview = showFullPayload
     ? JSON.stringify(event.payload, null, 2)
     : formatJsonPreview(event.payload);
 
   return (
-    <details className="rounded border px-3 py-2 text-xs">
-      <summary className="flex cursor-pointer items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{event.eventType}</Badge>
-          <span className="text-muted-foreground">{formatTimestamp(event.timestamp)}</span>
+    <details className="rounded-md border border-muted bg-card/50 px-2.5 py-1.5 text-[11px] group">
+      <summary className="flex cursor-pointer items-center justify-between gap-2 list-none">
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 shrink-0 font-normal">
+            {event.eventType}
+          </Badge>
+          <span className="text-muted-foreground text-[10px] truncate">
+            {formatTimestamp(event.timestamp)}
+          </span>
         </div>
-        <span className="text-muted-foreground truncate max-w-[200px]">{event.id}</span>
+        <span className="text-muted-foreground/60 text-[10px] truncate max-w-[150px] font-mono">
+          {event.id}
+        </span>
       </summary>
       <pre
-        className="mt-2 overflow-auto rounded bg-gray-50 p-2 text-xs dark:bg-gray-900"
+        className="mt-2 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2.5 text-[11px] border border-muted/50"
         style={{ maxHeight: MAX_PAYLOAD_HEIGHT }}
       >
         {payloadPreview}
       </pre>
     </details>
   );
-}
+});
+
+TraceEventRow.displayName = 'TraceEventRow';

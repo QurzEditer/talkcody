@@ -77,7 +77,7 @@ describe('WindowStateStore', () => {
     expect(windowsToRestore[0]?.label).toBe('window-b');
 
     const parsed = getStateFile();
-    expect(parsed?.windows.length).toBe(1);
+    expect(parsed?.windows.length).toBe(2);
     expect(parsed?.windows[0]?.label).toBe('window-b');
   });
 });

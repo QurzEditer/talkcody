@@ -261,9 +261,6 @@ function createRepositoryStore() {
           .catch((error) => {
             logger.error('Failed to track project opened:', error);
           });
-
-        toast.success(getTranslations().RepositoryStore.success.repositoryOpened);
-        logger.info('[openRepository] Repository opened successfully!');
       } catch (error) {
         logger.error('[openRepository] Error occurred:', error);
         const errorMessage = (error as Error).message;

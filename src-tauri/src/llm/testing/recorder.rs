@@ -1,6 +1,5 @@
 use crate::llm::testing::fixtures::{
-    fixture_path, FixtureInput, ProviderFixture, RecordedRequest, RecordedResponse,
-    RecordedSseEvent,
+    FixtureInput, ProviderFixture, RecordedRequest, RecordedResponse, RecordedSseEvent,
 };
 use crate::llm::types::StreamEvent;
 use serde_json::Value;

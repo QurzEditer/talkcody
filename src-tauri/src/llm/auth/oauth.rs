@@ -2,7 +2,6 @@ use crate::llm::auth::api_key_manager::LlmState;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::collections::HashSet;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use tauri::State;
