@@ -431,7 +431,7 @@ impl StreamHandler {
 
         log::info!("[LLM Stream {}] Starting to read stream...", request_id);
 
-        loop {
+        'stream_loop: loop {
             // Use timeout to prevent hanging on stream.next().await
             let chunk_result = timeout(stream_timeout, stream.next()).await;
 
@@ -640,7 +640,7 @@ impl StreamHandler {
                                     request_id
                                 );
                                 done_emitted = true;
-                                break;
+                                break 'stream_loop;
                             }
                         }
                         Ok(None) => {
@@ -848,7 +848,7 @@ impl StreamHandler {
     }
 
     fn parse_sse_event(raw: &str) -> Option<SseEvent> {
-        log::info!("[LLM Stream] Parsing SSE event: {}", raw);
+        log::debug!("[LLM Stream] Parsing SSE event (len={} bytes)", raw.len());
         let mut event: Option<String> = None;
         let mut data_lines = Vec::new();
         for line in raw.lines() {
@@ -1691,7 +1691,7 @@ mod tests {
 
     #[test]
     fn openai_oauth_emits_reasoning_events_from_content_part() {
-        // Test that reasoning events are emitted from response.content_part.added
+        // Content part reasoning events are not part of OpenAI Responses, ensure no reasoning events emitted.
         let mut state = ProtocolStreamState::default();
         let payload = json!({
             "type": "response.content_part.added",
@@ -1703,26 +1703,9 @@ mod tests {
         });
 
         let event = parse_openai_oauth_event_legacy(None, &payload.to_string(), &mut state)
-            .expect("parse event")
-            .expect("event");
-
-        match event {
-            StreamEvent::ReasoningStart { id, .. } => {
-                assert_eq!(id, "reasoning_123");
-            }
-            _ => panic!("Expected ReasoningStart, got {:?}", event),
-        }
-
-        // Next event should be ReasoningDelta
-        assert!(!state.pending_events.is_empty());
-        let delta_event = state.pending_events.remove(0);
-        match delta_event {
-            StreamEvent::ReasoningDelta { id, text, .. } => {
-                assert_eq!(id, "reasoning_123");
-                assert_eq!(text, "Let me think about this...");
-            }
-            _ => panic!("Expected ReasoningDelta, got {:?}", delta_event),
-        }
+            .expect("parse event");
+        assert!(event.is_none());
+        assert!(state.pending_events.is_empty());
     }
 
     #[test]
@@ -1742,60 +1725,154 @@ mod tests {
             .expect("event");
 
         match event {
-            StreamEvent::ReasoningStart { id, .. } => {
-                assert_eq!(id, "reasoning_456");
+            StreamEvent::ReasoningStart {
+                id,
+                provider_metadata,
+            } => {
+                assert_eq!(id, "reasoning_456:0");
+                let metadata = provider_metadata.expect("provider metadata");
+                assert_eq!(
+                    metadata
+                        .get("openai")
+                        .and_then(|value| value.get("itemId"))
+                        .and_then(|value| value.as_str()),
+                    Some("reasoning_456")
+                );
             }
             _ => panic!("Expected ReasoningStart from output_item, got {:?}", event),
         }
     }
 
     #[test]
-    fn openai_oauth_handles_reasoning_part_added_with_encrypted_content() {
-        // Test handling of response.reasoning_part.added with encrypted_content
+    fn openai_oauth_emits_reasoning_summary_deltas() {
         let mut state = ProtocolStreamState::default();
-        let payload = json!({
-            "type": "response.reasoning_part.added",
-            "part": {
-                "type": "encrypted_content",
-                "id": "reasoning_enc_789",
-                "encrypted_content": "base64encodedencrypteddata"
+        let item_added = json!({
+            "type": "response.output_item.added",
+            "item": {
+                "type": "reasoning",
+                "id": "rs_1",
+                "encrypted_content": "enc"
+            }
+        });
+        let summary_added = json!({
+            "type": "response.reasoning_summary_part.added",
+            "item_id": "rs_1",
+            "summary_index": 0
+        });
+        let summary_delta = json!({
+            "type": "response.reasoning_summary_text.delta",
+            "item_id": "rs_1",
+            "summary_index": 0,
+            "delta": "Hello"
+        });
+        let summary_done = json!({
+            "type": "response.reasoning_summary_part.done",
+            "item_id": "rs_1",
+            "summary_index": 0
+        });
+
+        let event = parse_openai_oauth_event_legacy(None, &item_added.to_string(), &mut state)
+            .expect("parse event")
+            .expect("event");
+        match event {
+            StreamEvent::ReasoningStart {
+                id,
+                provider_metadata,
+            } => {
+                assert_eq!(id, "rs_1:0");
+                let metadata = provider_metadata.expect("provider metadata");
+                assert_eq!(
+                    metadata
+                        .get("openai")
+                        .and_then(|value| value.get("reasoningEncryptedContent"))
+                        .and_then(|value| value.as_str()),
+                    Some("enc")
+                );
+            }
+            _ => panic!("Expected ReasoningStart for summary, got {:?}", event),
+        }
+
+        let _ = parse_openai_oauth_event_legacy(None, &summary_added.to_string(), &mut state)
+            .expect("parse event");
+        let event = parse_openai_oauth_event_legacy(None, &summary_delta.to_string(), &mut state)
+            .expect("parse event")
+            .expect("event");
+        match event {
+            StreamEvent::ReasoningDelta { id, text, .. } => {
+                assert_eq!(id, "rs_1:0");
+                assert_eq!(text, "Hello");
+            }
+            _ => panic!("Expected ReasoningDelta, got {:?}", event),
+        }
+
+        let event = parse_openai_oauth_event_legacy(None, &summary_done.to_string(), &mut state)
+            .expect("parse event")
+            .expect("event");
+        match event {
+            StreamEvent::ReasoningEnd { id } => {
+                assert_eq!(id, "rs_1:0");
+            }
+            _ => panic!("Expected ReasoningEnd, got {:?}", event),
+        }
+    }
+
+    #[test]
+    fn openai_oauth_emits_reasoning_end_with_encrypted_content_on_output_done() {
+        let mut state = ProtocolStreamState::default();
+        state.openai_store = Some(false);
+        let item_added = json!({
+            "type": "response.output_item.added",
+            "item": {
+                "type": "reasoning",
+                "id": "rs_2"
+            }
+        });
+        let summary_done = json!({
+            "type": "response.reasoning_summary_part.done",
+            "item_id": "rs_2",
+            "summary_index": 0
+        });
+        let output_done = json!({
+            "type": "response.output_item.done",
+            "item": {
+                "type": "reasoning",
+                "id": "rs_2",
+                "encrypted_content": "enc_final"
             }
         });
 
-        let event = parse_openai_oauth_event_legacy(None, &payload.to_string(), &mut state)
+        let _ = parse_openai_oauth_event_legacy(None, &item_added.to_string(), &mut state)
+            .expect("parse event");
+        let _ = parse_openai_oauth_event_legacy(None, &summary_done.to_string(), &mut state)
+            .expect("parse event");
+        let event = parse_openai_oauth_event_legacy(None, &output_done.to_string(), &mut state)
             .expect("parse event")
             .expect("event");
-
         match event {
-            StreamEvent::ReasoningStart { id, .. } => {
-                assert_eq!(id, "reasoning_enc_789");
+            StreamEvent::ReasoningDelta {
+                id,
+                provider_metadata,
+                ..
+            } => {
+                assert_eq!(id, "rs_2:0");
+                let metadata = provider_metadata.expect("provider metadata");
+                assert_eq!(
+                    metadata
+                        .get("openai")
+                        .and_then(|value| value.get("reasoningEncryptedContent"))
+                        .and_then(|value| value.as_str()),
+                    Some("enc_final")
+                );
             }
             _ => panic!(
-                "Expected ReasoningStart for encrypted content, got {:?}",
+                "Expected ReasoningDelta with encrypted content, got {:?}",
                 event
             ),
         }
 
-        // Should have a ReasoningDelta with provider_metadata containing encrypted content
-        assert!(!state.pending_events.is_empty());
-        let delta_event = state.pending_events.remove(0);
-        match delta_event {
-            StreamEvent::ReasoningDelta {
-                id,
-                text,
-                provider_metadata,
-            } => {
-                assert_eq!(id, "reasoning_enc_789");
-                assert_eq!(text, "");
-                assert!(provider_metadata.is_some());
-                let metadata = provider_metadata.unwrap();
-                assert!(metadata.get("openai").is_some());
-            }
-            _ => panic!(
-                "Expected ReasoningDelta with metadata, got {:?}",
-                delta_event
-            ),
-        }
+        assert!(state.pending_events.iter().any(|pending| {
+            matches!(pending, StreamEvent::ReasoningEnd { id } if id == "rs_2:0")
+        }));
     }
 
     #[test]
@@ -1814,7 +1891,7 @@ mod tests {
 
         match event {
             StreamEvent::ReasoningStart { id, .. } => {
-                assert_eq!(id, "reasoning_abc");
+                assert_eq!(id, "reasoning_abc:0");
             }
             _ => panic!(
                 "Expected ReasoningStart from content delta, got {:?}",
@@ -1827,7 +1904,7 @@ mod tests {
         let delta_event = state.pending_events.remove(0);
         match delta_event {
             StreamEvent::ReasoningDelta { id, text, .. } => {
-                assert_eq!(id, "reasoning_abc");
+                assert_eq!(id, "reasoning_abc:0");
                 assert_eq!(text, "More reasoning content");
             }
             _ => panic!(
@@ -1841,9 +1918,6 @@ mod tests {
     fn openai_oauth_handles_reasoning_part_done() {
         // Test handling of response.reasoning_part.done
         let mut state = ProtocolStreamState::default();
-        // First start the reasoning
-        state.current_thinking_id = Some("reasoning_xyz".to_string());
-
         let payload = json!({
             "type": "response.reasoning_part.done",
             "item_id": "reasoning_xyz"
@@ -1855,7 +1929,7 @@ mod tests {
 
         match event {
             StreamEvent::ReasoningEnd { id } => {
-                assert_eq!(id, "reasoning_xyz");
+                assert_eq!(id, "reasoning_xyz:0");
             }
             _ => panic!("Expected ReasoningEnd, got {:?}", event),
         }

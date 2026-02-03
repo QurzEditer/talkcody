@@ -201,7 +201,7 @@ export class LlmClient {
     refreshToken: string;
     expiresAt: number;
   }> {
-    return invoke('llm_claude_oauth_complete', params);
+    return invoke('llm_claude_oauth_complete', { request: params });
   }
 
   async refreshClaudeOAuth(params: { refreshToken: string }): Promise<{
@@ -209,24 +209,29 @@ export class LlmClient {
     refreshToken: string;
     expiresAt: number;
   }> {
-    return invoke('llm_claude_oauth_refresh', params);
+    return invoke('llm_claude_oauth_refresh', { request: params });
   }
 
-  async startOpenAIOAuth(): Promise<{ url: string; verifier: string; state: string }> {
-    return invoke('llm_openai_oauth_start');
+  async startOpenAIOAuth(params?: { redirectUri?: string }): Promise<{
+    url: string;
+    verifier: string;
+    state: string;
+  }> {
+    return invoke('llm_openai_oauth_start', { request: params ?? {} });
   }
 
   async completeOpenAIOAuth(params: {
     code: string;
     verifier: string;
     expectedState?: string;
+    redirectUri?: string;
   }): Promise<{
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
     accountId?: string;
   }> {
-    return invoke('llm_openai_oauth_complete', params);
+    return invoke('llm_openai_oauth_complete', { request: params });
   }
 
   async refreshOpenAIOAuth(params: { refreshToken: string }): Promise<{
@@ -235,7 +240,16 @@ export class LlmClient {
     expiresAt: number;
     accountId?: string;
   }> {
-    return invoke('llm_openai_oauth_refresh', params);
+    return invoke('llm_openai_oauth_refresh', { request: params });
+  }
+
+  async refreshOpenAIOAuthFromStore(): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+    accountId?: string;
+  }> {
+    return invoke('llm_openai_oauth_refresh_from_store');
   }
 
   async readQwenCredentials(params: { path: string }): Promise<{
@@ -333,6 +347,7 @@ export class LlmClient {
       expiresAt?: number | null;
       accountId?: string | null;
       isConnected?: boolean | null;
+      hasRefreshToken?: boolean | null;
     } | null;
     qwen?: {
       isConnected?: boolean | null;

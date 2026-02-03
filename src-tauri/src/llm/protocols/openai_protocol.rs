@@ -650,6 +650,8 @@ impl LlmProtocol for OpenAiProtocol {
             content_block_types: std::mem::take(&mut state.content_block_types),
             content_block_ids: std::mem::take(&mut state.content_block_ids),
             current_thinking_id: state.current_thinking_id.clone(),
+            openai_reasoning: std::mem::take(&mut state.openai_reasoning),
+            openai_store: state.openai_store,
         };
 
         let result = ProtocolStreamParser::parse_stream_event(self, ctx, &mut new_state);
@@ -667,6 +669,8 @@ impl LlmProtocol for OpenAiProtocol {
         state.content_block_types = new_state.content_block_types;
         state.content_block_ids = new_state.content_block_ids;
         state.current_thinking_id = new_state.current_thinking_id;
+        state.openai_reasoning = new_state.openai_reasoning;
+        state.openai_store = new_state.openai_store;
 
         result
     }

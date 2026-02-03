@@ -6,6 +6,8 @@ import { llmClient } from '@/services/llm/llm-client';
 
 const CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann';
 const OAUTH_REDIRECT_URI = 'http://localhost:1455/auth/callback';
+const OAUTH_AUTHORIZE_URL = 'https://auth.openai.com/oauth/authorize';
+const OAUTH_SCOPE = 'openid profile email offline_access';
 
 export interface OpenAIOAuthTokens {
   accessToken: string;
@@ -40,12 +42,41 @@ export interface JWTPayload {
   };
 }
 
+const OAUTH_EXTRA_PARAMS = {
+  id_token_add_organizations: 'true',
+  codex_cli_simplified_flow: 'true',
+  originator: 'codex_cli_rs',
+};
+
+function normalizeExpiresAt(expiresAt: number): number {
+  return expiresAt < 1_000_000_000_000 ? expiresAt * 1000 : expiresAt;
+}
+
 /**
  * Start OAuth flow - generates authorization URL via Rust.
  */
-export async function startOAuthFlow(): Promise<OAuthFlowResult> {
+export async function startOAuthFlow(redirectUri?: string): Promise<OAuthFlowResult> {
   logger.info('[OpenAIOAuth] Starting OAuth flow via Rust');
-  return llmClient.startOpenAIOAuth();
+  return llmClient.startOpenAIOAuth(redirectUri ? { redirectUri } : undefined);
+}
+
+export function buildAuthorizeUrl(params: {
+  redirectUri?: string;
+  codeChallenge: string;
+  state: string;
+}): string {
+  const url = new URL(OAUTH_AUTHORIZE_URL);
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('client_id', CLIENT_ID);
+  url.searchParams.set('redirect_uri', params.redirectUri ?? OAUTH_REDIRECT_URI);
+  url.searchParams.set('scope', OAUTH_SCOPE);
+  url.searchParams.set('code_challenge', params.codeChallenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  url.searchParams.set('state', params.state);
+  Object.entries(OAUTH_EXTRA_PARAMS).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+  return url.toString();
 }
 
 /**
@@ -96,20 +127,35 @@ export function parseAuthorizationInput(input: string): ParsedAuthInput {
 export async function exchangeCode(
   code: string,
   verifier: string,
-  expectedState?: string
+  expectedState?: string,
+  redirectUri?: string
 ): Promise<TokenExchangeResult> {
   try {
     const parsed = parseAuthorizationInput(code);
     const authCode = parsed.code || code;
     const state = expectedState ?? parsed.state;
 
+    if (!state) {
+      return {
+        type: 'failed',
+        error: 'Missing OAuth state parameter',
+      };
+    }
+
     logger.info('[OpenAIOAuth] Exchanging code via Rust');
     const tokens = await llmClient.completeOpenAIOAuth({
       code: authCode,
       verifier,
       expectedState: state,
+      redirectUri,
     });
-    return { type: 'success', tokens };
+    return {
+      type: 'success',
+      tokens: {
+        ...tokens,
+        expiresAt: normalizeExpiresAt(tokens.expiresAt),
+      },
+    };
   } catch (error) {
     logger.error('[OpenAIOAuth] Token exchange error:', error);
     return {
@@ -126,7 +172,13 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenExc
   try {
     logger.info('[OpenAIOAuth] Refreshing access token via Rust');
     const tokens = await llmClient.refreshOpenAIOAuth({ refreshToken });
-    return { type: 'success', tokens };
+    return {
+      type: 'success',
+      tokens: {
+        ...tokens,
+        expiresAt: normalizeExpiresAt(tokens.expiresAt),
+      },
+    };
   } catch (error) {
     logger.error('[OpenAIOAuth] Token refresh error:', error);
     return {

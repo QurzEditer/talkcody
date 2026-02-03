@@ -3,7 +3,7 @@
 
 import { create } from 'zustand';
 import { logger } from '@/lib/logger';
-import { isOpenAIOAuthConnected } from '@/providers/oauth/openai-oauth-store';
+import { isOpenAIOAuthConnected, useOpenAIOAuthStore } from '@/providers/oauth/openai-oauth-store';
 import type { OpenAIUsageData } from '@/services/openai-usage-service';
 import { fetchOpenAIUsage } from '@/services/openai-usage-service';
 
@@ -54,6 +54,21 @@ const CACHE_DURATION_MS = 2 * 60 * 1000;
 
 // Auto-refresh interval: 5 minutes
 const AUTO_REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+const OPENAI_OAUTH_EXPIRED_MESSAGE =
+  'OpenAI OAuth session expired. Please reconnect your OpenAI account in settings.';
+
+function validateUsageData(usageData: OpenAIUsageData): void {
+  if (!usageData || !usageData.five_hour || !usageData.seven_day) {
+    logger.error('[OpenAIUsageStore] Invalid data structure:', {
+      hasUsageData: !!usageData,
+      hasFiveHour: !!usageData?.five_hour,
+      hasSevenDay: !!usageData?.seven_day,
+      dataKeys: usageData ? Object.keys(usageData) : [],
+    });
+    throw new Error('Invalid usage data structure received from API');
+  }
+}
 
 let refreshInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -124,15 +139,7 @@ export const useOpenAIUsageStore = create<OpenAIUsageStore>((set, get) => ({
       logger.info('[OpenAIUsageStore] Received usage data:', JSON.stringify(usageData, null, 2));
 
       // Validate data structure
-      if (!usageData || !usageData.five_hour || !usageData.seven_day) {
-        logger.error('[OpenAIUsageStore] Invalid data structure:', {
-          hasUsageData: !!usageData,
-          hasFiveHour: !!usageData?.five_hour,
-          hasSevenDay: !!usageData?.seven_day,
-          dataKeys: usageData ? Object.keys(usageData) : [],
-        });
-        throw new Error('Invalid usage data structure received from API');
-      }
+      validateUsageData(usageData);
 
       set({
         usageData,
@@ -145,6 +152,36 @@ export const useOpenAIUsageStore = create<OpenAIUsageStore>((set, get) => ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       logger.error('[OpenAIUsageStore] Failed to fetch usage:', error);
+
+      if (errorMessage === OPENAI_OAUTH_EXPIRED_MESSAGE) {
+        logger.info('[OpenAIUsageStore] OAuth session expired, attempting token refresh');
+        const refreshed = await useOpenAIOAuthStore.getState().refreshTokens();
+
+        if (refreshed) {
+          try {
+            const usageData = await fetchOpenAIUsage();
+            validateUsageData(usageData);
+
+            set({
+              usageData,
+              lastFetchedAt: Date.now(),
+              isLoading: false,
+              error: null,
+            });
+
+            logger.info('[OpenAIUsageStore] Usage data updated successfully after refresh');
+            return;
+          } catch (retryError) {
+            const retryMessage = retryError instanceof Error ? retryError.message : 'Unknown error';
+            logger.error('[OpenAIUsageStore] Retry after refresh failed:', retryError);
+            set({
+              error: retryMessage,
+              isLoading: false,
+            });
+            return;
+          }
+        }
+      }
 
       set({
         error: errorMessage,

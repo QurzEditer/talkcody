@@ -39,6 +39,7 @@ export function OpenAIUsageTab() {
 
   // OpenAI OAuth state
   const isOAuthConnected = useOpenAIOAuthStore((state) => state.isConnected);
+  const initializeOAuth = useOpenAIOAuthStore((state) => state.initialize);
   const startOAuth = useOpenAIOAuthStore((state) => state.startOAuthWithAutoCallback);
 
   // Usage state
@@ -47,6 +48,11 @@ export function OpenAIUsageTab() {
   const error = useOpenAIUsageStore((state) => state.error);
   const initialize = useOpenAIUsageStore((state) => state.initialize);
   const refresh = useOpenAIUsageStore((state) => state.refresh);
+
+  // Initialize OAuth on mount
+  useEffect(() => {
+    void initializeOAuth();
+  }, [initializeOAuth]);
 
   // Initialize on mount
   useEffect(() => {

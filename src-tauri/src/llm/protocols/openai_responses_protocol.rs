@@ -1,7 +1,8 @@
 use crate::llm::protocols::stream_parser::StreamParseState;
 use crate::llm::protocols::{
     self, request_builder::RequestBuildContext, stream_parser::StreamParseContext, LlmProtocol,
-    ProtocolRequestBuilder, ProtocolStreamParser, ProtocolStreamState, ToolCallAccum,
+    OpenAiReasoningPartStatus, OpenAiReasoningState, ProtocolRequestBuilder, ProtocolStreamParser,
+    ProtocolStreamState, ToolCallAccum,
 };
 use crate::llm::types::{ContentPart, Message, MessageContent, StreamEvent, ToolDefinition};
 use serde_json::{json, Value};
@@ -297,6 +298,8 @@ pub(crate) fn parse_openai_oauth_event(
         content_block_ids: std::mem::take(&mut state.content_block_ids),
         reasoning_started: state.reasoning_started,
         reasoning_id: state.reasoning_id.clone(),
+        openai_reasoning: std::mem::take(&mut state.openai_reasoning),
+        openai_store: state.openai_store,
     };
 
     let result = parse_openai_oauth_event_legacy(event_type, data, &mut legacy_state);
@@ -313,6 +316,8 @@ pub(crate) fn parse_openai_oauth_event(
     state.content_block_types = legacy_state.content_block_types;
     state.content_block_ids = legacy_state.content_block_ids;
     state.current_thinking_id = legacy_state.current_thinking_id;
+    state.openai_reasoning = legacy_state.openai_reasoning;
+    state.openai_store = legacy_state.openai_store;
 
     result
 }
@@ -398,6 +403,14 @@ pub(crate) fn parse_openai_oauth_event_legacy(
         return Ok(None);
     }
 
+    if event_type.is_none() {
+        if let Some(store) = payload.get("response").and_then(|r| r.get("store")) {
+            if let Some(store_value) = store.as_bool() {
+                state.openai_store = Some(store_value);
+            }
+        }
+    }
+
     let mut resolved_event = event_type.map(|value| value.to_string());
     if resolved_event.is_none() {
         resolved_event = payload
@@ -433,6 +446,11 @@ pub(crate) fn parse_openai_oauth_event_legacy(
     match event_type.as_str() {
         "response.created" | "response.in_progress" => {
             log::debug!("[OpenAI OAuth] Response lifecycle event: {}", event_type);
+            if let Some(store) = payload.get("response").and_then(|r| r.get("store")) {
+                if let Some(store_value) = store.as_bool() {
+                    state.openai_store = Some(store_value);
+                }
+            }
         }
         "response.output_item.added" => {
             log::debug!("[OpenAI OAuth] Output item added: {:?}", payload);
@@ -499,33 +517,92 @@ pub(crate) fn parse_openai_oauth_event_legacy(
                         }
                     }
                     Some("reasoning") => {
-                        // Handle reasoning item (encrypted_content, summary, or text)
                         let item_id = item
                             .get("id")
                             .and_then(|v| v.as_str())
                             .unwrap_or("reasoning")
                             .to_string();
-                        if state.current_thinking_id.as_deref() != Some(&item_id) {
-                            state.current_thinking_id = Some(item_id.clone());
-                            state.pending_events.push(StreamEvent::ReasoningStart {
-                                id: item_id.clone(),
-                                provider_metadata: None,
-                            });
+                        let encrypted_content = item
+                            .get("encrypted_content")
+                            .and_then(|v| v.as_str())
+                            .map(|value| value.to_string());
+                        let active = state
+                            .openai_reasoning
+                            .entry(item_id.clone())
+                            .or_insert_with(OpenAiReasoningState::default);
+                        if encrypted_content.is_some() {
+                            active.encrypted_content = encrypted_content.clone();
                         }
+                        active
+                            .summary_parts
+                            .entry(0)
+                            .or_insert(OpenAiReasoningPartStatus::Active);
 
-                        // Handle summary array if present (reasoning summary from OpenAI)
+                        let provider_metadata = serde_json::json!({
+                            "openai": {
+                                "itemId": item_id,
+                                "reasoningEncryptedContent": encrypted_content
+                            }
+                        });
+
+                        state.pending_events.push(StreamEvent::ReasoningStart {
+                            id: format!("{}:0", item_id),
+                            provider_metadata: Some(provider_metadata),
+                        });
+
                         if let Some(summary) = item.get("summary").and_then(|v| v.as_array()) {
-                            let summary_text: String = summary
-                                .iter()
-                                .filter_map(|s| s.get("text").and_then(|t| t.as_str()))
-                                .collect::<Vec<_>>()
-                                .join("\n");
-                            if !summary_text.is_empty() {
+                            for (index, summary_item) in summary.iter().enumerate() {
+                                let text = summary_item
+                                    .get("text")
+                                    .and_then(|v| v.as_str())
+                                    .unwrap_or("");
+                                if text.is_empty() {
+                                    continue;
+                                }
+                                let summary_index = index as u64;
+                                let entry = active
+                                    .summary_parts
+                                    .entry(summary_index)
+                                    .or_insert(OpenAiReasoningPartStatus::Active);
+                                if summary_index != 0 && *entry == OpenAiReasoningPartStatus::Active
+                                {
+                                    let provider_metadata = serde_json::json!({
+                                        "openai": {
+                                            "itemId": item_id,
+                                            "reasoningEncryptedContent": active.encrypted_content
+                                        }
+                                    });
+                                    state.pending_events.push(StreamEvent::ReasoningStart {
+                                        id: format!("{}:{}", item_id, summary_index),
+                                        provider_metadata: Some(provider_metadata),
+                                    });
+                                }
+
                                 state.pending_events.push(StreamEvent::ReasoningDelta {
-                                    id: item_id,
-                                    text: summary_text,
-                                    provider_metadata: None,
+                                    id: format!("{}:{}", item_id, summary_index),
+                                    text: text.to_string(),
+                                    provider_metadata: Some(serde_json::json!({
+                                        "openai": {
+                                            "itemId": item_id
+                                        }
+                                    })),
                                 });
+
+                                let store = state.openai_store.unwrap_or(true);
+                                if store {
+                                    state.pending_events.push(StreamEvent::ReasoningEnd {
+                                        id: format!("{}:{}", item_id, summary_index),
+                                    });
+                                    active.summary_parts.insert(
+                                        summary_index,
+                                        OpenAiReasoningPartStatus::Concluded,
+                                    );
+                                } else {
+                                    active.summary_parts.insert(
+                                        summary_index,
+                                        OpenAiReasoningPartStatus::CanConclude,
+                                    );
+                                }
                             }
                         }
                     }
@@ -539,7 +616,7 @@ pub(crate) fn parse_openai_oauth_event_legacy(
                 let part_type = part.get("type").and_then(|v| v.as_str());
 
                 match part_type {
-                    Some("text") => {
+                    Some("text") | Some("output_text") => {
                         if let Some(text) = part.get("text").and_then(|v| v.as_str()) {
                             if !state.text_started {
                                 state.text_started = true;
@@ -547,48 +624,6 @@ pub(crate) fn parse_openai_oauth_event_legacy(
                             }
                             state.pending_events.push(StreamEvent::TextDelta {
                                 text: text.to_string(),
-                            });
-                        }
-                    }
-                    Some("reasoning") => {
-                        let id = part
-                            .get("id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("reasoning")
-                            .to_string();
-
-                        if state.current_thinking_id.as_deref() != Some(&id) {
-                            state.current_thinking_id = Some(id.clone());
-                            state.pending_events.push(StreamEvent::ReasoningStart {
-                                id: id.clone(),
-                                provider_metadata: None,
-                            });
-                        }
-
-                        // Handle reasoning text if present
-                        if let Some(text) = part.get("text").and_then(|v| v.as_str()) {
-                            if !text.is_empty() {
-                                state.pending_events.push(StreamEvent::ReasoningDelta {
-                                    id: id.clone(),
-                                    text: text.to_string(),
-                                    provider_metadata: None,
-                                });
-                            }
-                        }
-
-                        // Handle encrypted_content if present
-                        if let Some(encrypted) =
-                            part.get("encrypted_content").and_then(|v| v.as_str())
-                        {
-                            let provider_metadata = serde_json::json!({
-                                "openai": {
-                                    "encryptedContent": encrypted
-                                }
-                            });
-                            state.pending_events.push(StreamEvent::ReasoningDelta {
-                                id,
-                                text: String::new(),
-                                provider_metadata: Some(provider_metadata),
                             });
                         }
                     }
@@ -628,122 +663,256 @@ pub(crate) fn parse_openai_oauth_event_legacy(
             }
             emit_tool_calls(state, true);
         }
-        "response.reasoning_text.delta" => {
-            let id = payload
+        "response.reasoning_summary_part.added" => {
+            log::debug!("[OpenAI OAuth] Reasoning summary part added: {:?}", payload);
+            let item_id = payload
                 .get("item_id")
                 .and_then(|v| v.as_str())
-                .unwrap_or("default")
+                .unwrap_or("reasoning")
                 .to_string();
-            let delta = payload.get("delta").and_then(|v| v.as_str()).unwrap_or("");
-            log::debug!("[OpenAI OAuth] Reasoning delta for {}: {}", id, delta);
-            if state.current_thinking_id.as_deref() != Some(&id) {
-                state.current_thinking_id = Some(id.clone());
+            let summary_index = payload
+                .get("summary_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            let state_entry = state
+                .openai_reasoning
+                .entry(item_id.clone())
+                .or_insert_with(OpenAiReasoningState::default);
+
+            state_entry
+                .summary_parts
+                .entry(summary_index)
+                .or_insert(OpenAiReasoningPartStatus::Active);
+
+            if summary_index > 0 {
+                let can_conclude: Vec<u64> = state_entry
+                    .summary_parts
+                    .iter()
+                    .filter_map(|(index, status)| {
+                        if *status == OpenAiReasoningPartStatus::CanConclude {
+                            Some(*index)
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                for index in can_conclude {
+                    state.pending_events.push(StreamEvent::ReasoningEnd {
+                        id: format!("{}:{}", item_id, index),
+                    });
+                    state_entry
+                        .summary_parts
+                        .insert(index, OpenAiReasoningPartStatus::Concluded);
+                }
+
+                let provider_metadata = serde_json::json!({
+                    "openai": {
+                        "itemId": item_id,
+                        "reasoningEncryptedContent": state_entry.encrypted_content
+                    }
+                });
                 state.pending_events.push(StreamEvent::ReasoningStart {
-                    id: id.clone(),
-                    provider_metadata: None,
+                    id: format!("{}:{}", item_id, summary_index),
+                    provider_metadata: Some(provider_metadata),
                 });
             }
+        }
+        "response.reasoning_summary_text.delta" => {
+            let item_id = payload
+                .get("item_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("reasoning")
+                .to_string();
+            let summary_index = payload
+                .get("summary_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let delta = payload.get("delta").and_then(|v| v.as_str()).unwrap_or("");
             if !delta.is_empty() {
                 state.pending_events.push(StreamEvent::ReasoningDelta {
-                    id,
+                    id: format!("{}:{}", item_id, summary_index),
                     text: delta.to_string(),
-                    provider_metadata: None,
+                    provider_metadata: Some(serde_json::json!({
+                        "openai": {
+                            "itemId": item_id
+                        }
+                    })),
                 });
             }
         }
-        "response.reasoning_text.done" => {
-            let id = payload
+        "response.reasoning_summary_part.done" => {
+            log::debug!("[OpenAI OAuth] Reasoning summary part done: {:?}", payload);
+            let item_id = payload
                 .get("item_id")
                 .and_then(|v| v.as_str())
-                .unwrap_or("default")
+                .unwrap_or("reasoning")
                 .to_string();
-            log::debug!("[OpenAI OAuth] Reasoning done for {}", id);
-            state.pending_events.push(StreamEvent::ReasoningEnd { id });
-        }
-        "response.reasoning_part.added" => {
-            log::debug!("[OpenAI OAuth] Reasoning part added: {:?}", payload);
-            if let Some(part) = payload.get("part") {
-                let part_type = part.get("type").and_then(|v| v.as_str());
-                let id = part
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("reasoning")
-                    .to_string();
+            let summary_index = payload
+                .get("summary_index")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
 
-                if state.current_thinking_id.as_deref() != Some(&id) {
-                    state.current_thinking_id = Some(id.clone());
-                    state.pending_events.push(StreamEvent::ReasoningStart {
-                        id: id.clone(),
-                        provider_metadata: None,
+            let store = state.openai_store.unwrap_or(true);
+            if let Some(active) = state.openai_reasoning.get_mut(&item_id) {
+                if store {
+                    state.pending_events.push(StreamEvent::ReasoningEnd {
+                        id: format!("{}:{}", item_id, summary_index),
                     });
-                }
-
-                // Handle reasoning text if present in the part
-                if let Some(text) = part.get("text").and_then(|v| v.as_str()) {
-                    if !text.is_empty() {
-                        state.pending_events.push(StreamEvent::ReasoningDelta {
-                            id: id.clone(),
-                            text: text.to_string(),
-                            provider_metadata: None,
-                        });
-                    }
-                }
-
-                // Handle encrypted_content - store in provider_metadata for potential decryption
-                if part_type == Some("encrypted_content") {
-                    if let Some(encrypted) = part.get("encrypted_content").and_then(|v| v.as_str())
-                    {
-                        let provider_metadata = serde_json::json!({
-                            "openai": {
-                                "encryptedContent": encrypted
-                            }
-                        });
-                        state.pending_events.push(StreamEvent::ReasoningDelta {
-                            id,
-                            text: String::new(),
-                            provider_metadata: Some(provider_metadata),
-                        });
-                    }
+                    active
+                        .summary_parts
+                        .insert(summary_index, OpenAiReasoningPartStatus::Concluded);
+                } else {
+                    active
+                        .summary_parts
+                        .insert(summary_index, OpenAiReasoningPartStatus::CanConclude);
                 }
             }
+        }
+        "response.output_item.done" => {
+            log::debug!("[OpenAI OAuth] Output item done: {:?}", payload);
+            if let Some(item) = payload.get("item") {
+                if item.get("type").and_then(|v| v.as_str()) == Some("reasoning") {
+                    let item_id = item
+                        .get("id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("reasoning")
+                        .to_string();
+                    let encrypted_content = item
+                        .get("encrypted_content")
+                        .and_then(|v| v.as_str())
+                        .map(|value| value.to_string());
+
+                    if let Some(active) = state.openai_reasoning.get_mut(&item_id) {
+                        if encrypted_content.is_some() {
+                            active.encrypted_content = encrypted_content.clone();
+                        }
+                        let provider_metadata = serde_json::json!({
+                            "openai": {
+                                "itemId": item_id,
+                                "reasoningEncryptedContent": active.encrypted_content
+                            }
+                        });
+                        let to_close: Vec<u64> = active
+                            .summary_parts
+                            .iter()
+                            .filter_map(|(index, status)| {
+                                if *status == OpenAiReasoningPartStatus::Active
+                                    || *status == OpenAiReasoningPartStatus::CanConclude
+                                {
+                                    Some(*index)
+                                } else {
+                                    None
+                                }
+                            })
+                            .collect();
+                        for index in to_close {
+                            state.pending_events.push(StreamEvent::ReasoningDelta {
+                                id: format!("{}:{}", item_id, index),
+                                text: String::new(),
+                                provider_metadata: Some(provider_metadata.clone()),
+                            });
+                            state.pending_events.push(StreamEvent::ReasoningEnd {
+                                id: format!("{}:{}", item_id, index),
+                            });
+                            active
+                                .summary_parts
+                                .insert(index, OpenAiReasoningPartStatus::Concluded);
+                        }
+                    }
+                    state.openai_reasoning.remove(&item_id);
+                }
+            }
+        }
+        "response.reasoning_text.delta" => {
+            log::debug!(
+                "[OpenAI OAuth] Ignoring legacy reasoning text delta: {:?}",
+                payload
+            );
+        }
+        "response.reasoning_text.done" => {
+            log::debug!(
+                "[OpenAI OAuth] Ignoring legacy reasoning text done: {:?}",
+                payload
+            );
+        }
+        "response.reasoning_part.added" => {
+            log::debug!(
+                "[OpenAI OAuth] Ignoring legacy reasoning part added: {:?}",
+                payload
+            );
         }
         "response.reasoning_content.delta" => {
             log::debug!("[OpenAI OAuth] Reasoning content delta: {:?}", payload);
-            let id = payload
+            let item_id = payload
                 .get("item_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("reasoning")
                 .to_string();
             let delta = payload.get("delta").and_then(|v| v.as_str()).unwrap_or("");
 
-            if state.current_thinking_id.as_deref() != Some(&id) {
-                state.current_thinking_id = Some(id.clone());
+            // Get or create reasoning state
+            let state_entry = state
+                .openai_reasoning
+                .entry(item_id.clone())
+                .or_insert_with(OpenAiReasoningState::default);
+
+            // Mark part 0 as active and check if this is the first start
+            let first_start = state_entry
+                .summary_parts
+                .insert(0, OpenAiReasoningPartStatus::Active)
+                .is_none();
+
+            let reasoning_id = format!("{}:0", item_id);
+
+            let provider_metadata = serde_json::json!({
+                "openai": {
+                    "itemId": item_id.clone()
+                }
+            });
+
+            // Push ReasoningStart event only on first start
+            if first_start {
                 state.pending_events.push(StreamEvent::ReasoningStart {
-                    id: id.clone(),
-                    provider_metadata: None,
+                    id: reasoning_id.clone(),
+                    provider_metadata: Some(provider_metadata.clone()),
                 });
             }
 
+            // Push ReasoningDelta event
             if !delta.is_empty() {
                 state.pending_events.push(StreamEvent::ReasoningDelta {
-                    id,
+                    id: reasoning_id,
                     text: delta.to_string(),
-                    provider_metadata: None,
+                    provider_metadata: Some(provider_metadata),
                 });
             }
         }
         "response.reasoning_part.done" => {
             log::debug!("[OpenAI OAuth] Reasoning part done: {:?}", payload);
-            let id = payload
+            let item_id = payload
                 .get("item_id")
                 .and_then(|v| v.as_str())
                 .unwrap_or("reasoning")
                 .to_string();
-            state.pending_events.push(StreamEvent::ReasoningEnd { id });
+
+            if let Some(active) = state.openai_reasoning.get_mut(&item_id) {
+                active
+                    .summary_parts
+                    .insert(0, OpenAiReasoningPartStatus::Concluded);
+            }
+
+            // Push ReasoningEnd event
+            state.pending_events.push(StreamEvent::ReasoningEnd {
+                id: format!("{}:0", item_id),
+            });
         }
         "response.completed" => {
             log::debug!("[OpenAI OAuth] Response completed");
             if let Some(response) = payload.get("response") {
+                if let Some(store) = response.get("store").and_then(|v| v.as_bool()) {
+                    state.openai_store = Some(store);
+                }
                 if let Some(usage) = response.get("usage") {
                     let input_tokens = usage
                         .get("input_tokens")
@@ -795,9 +964,64 @@ pub(crate) fn parse_openai_oauth_event_legacy(
                         }
                     }
                 }
+
+                if let Some(output) = response.get("output").and_then(|v| v.as_array()) {
+                    for item in output {
+                        if item.get("type").and_then(|v| v.as_str()) == Some("reasoning") {
+                            let item_id = item
+                                .get("id")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("reasoning")
+                                .to_string();
+                            let encrypted_content = item
+                                .get("encrypted_content")
+                                .and_then(|v| v.as_str())
+                                .map(|value| value.to_string());
+
+                            if let Some(active) = state.openai_reasoning.get_mut(&item_id) {
+                                if encrypted_content.is_some() {
+                                    active.encrypted_content = encrypted_content.clone();
+                                }
+                                let provider_metadata = serde_json::json!({
+                                    "openai": {
+                                        "itemId": item_id,
+                                        "reasoningEncryptedContent": active.encrypted_content
+                                    }
+                                });
+                                let to_close: Vec<u64> = active
+                                    .summary_parts
+                                    .iter()
+                                    .filter_map(|(index, status)| {
+                                        if *status == OpenAiReasoningPartStatus::Active
+                                            || *status == OpenAiReasoningPartStatus::CanConclude
+                                        {
+                                            Some(*index)
+                                        } else {
+                                            None
+                                        }
+                                    })
+                                    .collect();
+                                for index in to_close {
+                                    state.pending_events.push(StreamEvent::ReasoningDelta {
+                                        id: format!("{}:{}", item_id, index),
+                                        text: String::new(),
+                                        provider_metadata: Some(provider_metadata.clone()),
+                                    });
+                                    state.pending_events.push(StreamEvent::ReasoningEnd {
+                                        id: format!("{}:{}", item_id, index),
+                                    });
+                                    active
+                                        .summary_parts
+                                        .insert(index, OpenAiReasoningPartStatus::Concluded);
+                                }
+                            }
+                            state.openai_reasoning.remove(&item_id);
+                        }
+                    }
+                }
             }
             state.pending_events.push(StreamEvent::Done {
-                finish_reason: None,
+                finish_reason: state.finish_reason.clone(),
             });
         }
         "response.failed" => {
@@ -1001,6 +1225,8 @@ impl LlmProtocol for OpenAiResponsesProtocol {
             content_block_types: std::mem::take(&mut state.content_block_types),
             content_block_ids: std::mem::take(&mut state.content_block_ids),
             current_thinking_id: state.current_thinking_id.clone(),
+            openai_reasoning: std::mem::take(&mut state.openai_reasoning),
+            openai_store: state.openai_store,
         };
 
         let result = ProtocolStreamParser::parse_stream_event(self, ctx, &mut new_state);
@@ -1017,6 +1243,8 @@ impl LlmProtocol for OpenAiResponsesProtocol {
         state.content_block_types = new_state.content_block_types;
         state.content_block_ids = new_state.content_block_ids;
         state.current_thinking_id = new_state.current_thinking_id;
+        state.openai_reasoning = new_state.openai_reasoning;
+        state.openai_store = new_state.openai_store;
 
         result
     }

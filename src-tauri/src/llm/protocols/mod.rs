@@ -65,6 +65,21 @@ pub struct ProtocolStreamState {
     pub content_block_ids: HashMap<usize, String>,
     pub reasoning_started: bool,
     pub reasoning_id: Option<String>,
+    pub openai_reasoning: HashMap<String, OpenAiReasoningState>,
+    pub openai_store: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OpenAiReasoningPartStatus {
+    Active,
+    CanConclude,
+    Concluded,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct OpenAiReasoningState {
+    pub encrypted_content: Option<String>,
+    pub summary_parts: HashMap<u64, OpenAiReasoningPartStatus>,
 }
 
 #[derive(Default, Clone)]

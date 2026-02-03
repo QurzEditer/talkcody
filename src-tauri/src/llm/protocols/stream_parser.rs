@@ -19,6 +19,9 @@ pub struct StreamParseState {
     pub content_block_types: std::collections::HashMap<usize, String>,
     pub content_block_ids: std::collections::HashMap<usize, String>,
     pub current_thinking_id: Option<String>,
+    // OpenAI Responses reasoning summary tracking
+    pub openai_reasoning: std::collections::HashMap<String, super::OpenAiReasoningState>,
+    pub openai_store: Option<bool>,
 }
 
 impl StreamParseState {

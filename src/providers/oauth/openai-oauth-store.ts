@@ -8,6 +8,8 @@ import { logger } from '@/lib/logger';
 import { llmClient } from '@/services/llm/llm-client';
 import { exchangeCode, startOAuthFlow } from './openai-oauth-service';
 
+const OPENAI_OAUTH_CALLBACK_PATH = '/auth/callback';
+
 // OAuth callback result from Rust server
 interface OAuthCallbackResult {
   success: boolean;
@@ -25,6 +27,7 @@ interface OpenAIOAuthState {
   // Token metadata (in-memory)
   expiresAt: number | null;
   accountId: string | null;
+  redirectUri: string | null;
 
   // OAuth flow state (temporary during flow)
   verifier: string | null;
@@ -46,6 +49,7 @@ interface OpenAIOAuthActions {
   startOAuth: () => Promise<string>;
   startOAuthWithAutoCallback: () => Promise<string>;
   completeOAuth: (code: string) => Promise<void>;
+  refreshTokens: () => Promise<boolean>;
   disconnect: () => Promise<void>;
   cleanupCallbackListener: () => void;
 }
@@ -68,6 +72,7 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
   error: null,
   expiresAt: null,
   accountId: null,
+  redirectUri: null,
   verifier: null,
   expectedState: null,
   isInitialized: false,
@@ -86,15 +91,17 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
 
       const snapshot = await loadOAuthSnapshot();
       const isConnected = snapshot?.openai?.isConnected || false;
+      const hasRefreshToken = snapshot?.openai?.hasRefreshToken || false;
       const expiresAt = snapshot?.openai?.expiresAt || null;
       const accountId = snapshot?.openai?.accountId || null;
 
-      logger.info('[OpenAIOAuth] Initialized', { isConnected });
+      logger.info('[OpenAIOAuth] Initialized', { isConnected, hasRefreshToken });
 
       set({
-        isConnected,
+        isConnected: isConnected || hasRefreshToken,
         expiresAt,
         accountId,
+        redirectUri: null,
         isLoading: false,
         isInitialized: true,
       });
@@ -141,20 +148,21 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // Generate OAuth flow first to get state
-      const oauthResult = await startOAuthFlow();
-
-      // Start the callback server with expected state
+      // Start the callback server first to determine the actual port
       const port = await invoke<number>('start_oauth_callback_server', {
-        expectedState: oauthResult.state,
+        expectedState: undefined,
       });
 
-      // Check if we got a different port than default (port was in use)
       if (port !== 1455) {
         logger.warn('[OpenAIOAuth] Default port was in use, using alternative port:', port);
       }
 
       logger.info('[OpenAIOAuth] Callback server started on port:', port);
+
+      const redirectUri = `http://localhost:${port}${OPENAI_OAUTH_CALLBACK_PATH}`;
+
+      // Generate OAuth flow with the actual redirect URI
+      const oauthResult = await startOAuthFlow(redirectUri);
 
       // Listen for callback event
       const unlisten = await listen<OAuthCallbackResult>('openai-oauth-callback', async (event) => {
@@ -162,6 +170,19 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
         logger.info('[OpenAIOAuth] Callback received:', result);
 
         if (result.success && result.code) {
+          if (result.state !== oauthResult.state) {
+            logger.error('[OpenAIOAuth] OAuth state mismatch on callback', {
+              expected: oauthResult.state,
+              received: result.state,
+            });
+            set({
+              error: 'OAuth state mismatch',
+              isLoading: false,
+            });
+            get().cleanupCallbackListener();
+            return;
+          }
+
           // Auto-complete OAuth flow
           try {
             await get().completeOAuth(result.code);
@@ -188,6 +209,7 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
       set({
         verifier: oauthResult.verifier,
         expectedState: oauthResult.state,
+        redirectUri,
         callbackServerPort: port,
         callbackUnlisten: unlisten,
         isLoading: false,
@@ -217,7 +239,7 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
 
   // Complete OAuth flow with authorization code (or full callback URL)
   completeOAuth: async (code: string) => {
-    const { verifier, expectedState } = get();
+    const { verifier, expectedState, redirectUri } = get();
 
     if (!verifier) {
       throw new Error('No verifier found. Please start OAuth flow first.');
@@ -226,7 +248,12 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      const result = await exchangeCode(code, verifier, expectedState || undefined);
+      const result = await exchangeCode(
+        code,
+        verifier,
+        expectedState || undefined,
+        redirectUri || undefined
+      );
 
       if (result.type === 'failed' || !result.tokens) {
         throw new Error(result.error || 'Token exchange failed');
@@ -242,6 +269,7 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
         accountId: accountId || null,
         verifier: null,
         expectedState: null,
+        redirectUri: null,
         isLoading: false,
       });
     } catch (error) {
@@ -250,9 +278,44 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
         error: error instanceof Error ? error.message : 'Failed to complete OAuth',
         verifier: null,
         expectedState: null,
+        redirectUri: null,
         isLoading: false,
       });
       throw error;
+    }
+  },
+
+  // Refresh tokens via Rust
+  refreshTokens: async () => {
+    const { isLoading } = get();
+
+    if (isLoading) {
+      logger.debug('[OpenAIOAuth] Already busy, skipping token refresh');
+      return false;
+    }
+
+    set({ isLoading: true, error: null });
+
+    try {
+      const tokens = await llmClient.refreshOpenAIOAuthFromStore();
+
+      logger.info('[OpenAIOAuth] Token refreshed successfully');
+
+      set({
+        isConnected: true,
+        expiresAt: tokens.expiresAt,
+        accountId: tokens.accountId || null,
+        isLoading: false,
+      });
+
+      return true;
+    } catch (error) {
+      logger.error('[OpenAIOAuth] Token refresh failed:', error);
+      set({
+        error: error instanceof Error ? error.message : 'Token refresh failed',
+        isLoading: false,
+      });
+      return false;
     }
   },
 
@@ -269,6 +332,7 @@ export const useOpenAIOAuthStore = create<OpenAIOAuthStore>((set, get) => ({
         isConnected: false,
         expiresAt: null,
         accountId: null,
+        redirectUri: null,
         isLoading: false,
       });
     } catch (error) {

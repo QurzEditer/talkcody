@@ -1,4 +1,4 @@
-use crate::llm::auth::api_key_manager::LlmState;
+use crate::llm::auth::api_key_manager::{normalize_domain, ApiKeyManager, LlmState};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -7,12 +7,11 @@ use std::time::{Duration, Instant};
 use tauri::State;
 use tokio::sync::Mutex;
 
-use crate::llm::auth::api_key_manager::normalize_domain;
-
 const OPENAI_CLIENT_ID: &str = "app_EMoamEEZ73f0CkXaXp7hrann";
 const OPENAI_REDIRECT_URI: &str = "http://localhost:1455/auth/callback";
-const OPENAI_AUTH_URL: &str = "https://auth.openai.com/authorize";
-const OPENAI_TOKEN_URL: &str = "https://auth.openai.com/token";
+const OPENAI_AUTH_URL: &str = "https://auth.openai.com/oauth/authorize";
+const OPENAI_TOKEN_URL: &str = "https://auth.openai.com/oauth/token";
+const OPENAI_OAUTH_SCOPE: &str = "openid profile email offline_access";
 
 const CLAUDE_CLIENT_ID: &str = "app_01Kcx9v5mR2eGz4B2KG1hp6P";
 const CLAUDE_REDIRECT_URI: &str = "http://localhost:1455/auth/callback";
@@ -124,13 +123,13 @@ fn extract_openai_account_id(token: &str) -> Option<String> {
 
 /// Base64 URL decoding (handles padding)
 fn base64_url_decode(input: &str) -> Result<Vec<u8>, String> {
-    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+    use base64::{engine::general_purpose::URL_SAFE, Engine};
 
     // Add padding if necessary
     let padding = (4 - input.len() % 4) % 4;
     let padded = format!("{}{}", input, "=".repeat(padding));
 
-    URL_SAFE_NO_PAD
+    URL_SAFE
         .decode(&padded)
         .map_err(|e| format!("Base64 decode error: {}", e))
 }
@@ -138,6 +137,53 @@ fn base64_url_decode(input: &str) -> Result<Vec<u8>, String> {
 // ============================================================================
 // OpenAI OAuth
 // ============================================================================
+
+fn build_openai_authorize_url(redirect_uri: &str, challenge: &str, state: &str) -> String {
+    let mut url = url::Url::parse(OPENAI_AUTH_URL).expect("OPENAI_AUTH_URL is valid");
+    url.query_pairs_mut()
+        .append_pair("response_type", "code")
+        .append_pair("client_id", OPENAI_CLIENT_ID)
+        .append_pair("redirect_uri", redirect_uri)
+        .append_pair("scope", OPENAI_OAUTH_SCOPE)
+        .append_pair("code_challenge", challenge)
+        .append_pair("code_challenge_method", "S256")
+        .append_pair("state", state)
+        .append_pair("id_token_add_organizations", "true")
+        .append_pair("codex_cli_simplified_flow", "true")
+        .append_pair("originator", "codex_cli_rs");
+    url.to_string()
+}
+
+#[cfg(test)]
+mod openai_authorize_url_tests {
+    use super::*;
+
+    #[test]
+    fn openai_authorize_url_uses_oauth_endpoints_and_scope() {
+        let redirect = "http://localhost:1455/auth/callback";
+        let challenge = "test_challenge";
+        let state = "test_state";
+        let url = build_openai_authorize_url(redirect, challenge, state);
+
+        assert!(url.starts_with("https://auth.openai.com/oauth/authorize"));
+        assert!(url.contains("response_type=code"));
+        assert!(url.contains("client_id=app_EMoamEEZ73f0CkXaXp7hrann"));
+        assert!(url.contains("redirect_uri=http%3A%2F%2Flocalhost%3A1455%2Fauth%2Fcallback"));
+        assert!(url.contains("scope=openid+profile+email+offline_access"));
+        assert!(url.contains("code_challenge=test_challenge"));
+        assert!(url.contains("code_challenge_method=S256"));
+        assert!(url.contains("state=test_state"));
+        assert!(url.contains("id_token_add_organizations=true"));
+        assert!(url.contains("codex_cli_simplified_flow=true"));
+        assert!(url.contains("originator=codex_cli_rs"));
+    }
+}
+
+#[derive(Deserialize)]
+pub struct OpenAIOAuthStartRequest {
+    #[serde(rename = "redirectUri")]
+    pub redirect_uri: Option<String>,
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -148,7 +194,9 @@ pub struct OpenAIOAuthStartResponse {
 }
 
 #[tauri::command]
-pub async fn llm_openai_oauth_start() -> Result<OpenAIOAuthStartResponse, String> {
+pub async fn llm_openai_oauth_start(
+    request: Option<OpenAIOAuthStartRequest>,
+) -> Result<OpenAIOAuthStartResponse, String> {
     let verifier = generate_code_verifier();
     let challenge = code_challenge(&verifier);
     let state = generate_state();
@@ -156,20 +204,10 @@ pub async fn llm_openai_oauth_start() -> Result<OpenAIOAuthStartResponse, String
     // Store state for CSRF protection
     store_oauth_state(state.clone()).await;
 
-    let redirect_uri_encoded = OPENAI_REDIRECT_URI
-        .replace(':', "%3A")
-        .replace('/', "%2F")
-        .replace('?', "%3F")
-        .replace('&', "%26")
-        .replace('=', "%3D");
-    let url = format!(
-        "{}?client_id={}&redirect_uri={}&response_type=code&code_challenge={}&code_challenge_method=S256&state={}",
-        OPENAI_AUTH_URL,
-        OPENAI_CLIENT_ID,
-        redirect_uri_encoded,
-        challenge,
-        state
-    );
+    let redirect_uri = request
+        .and_then(|value| value.redirect_uri)
+        .unwrap_or_else(|| OPENAI_REDIRECT_URI.to_string());
+    let url = build_openai_authorize_url(&redirect_uri, &challenge, &state);
 
     Ok(OpenAIOAuthStartResponse {
         url,
@@ -184,6 +222,15 @@ pub struct OpenAIOAuthCompleteRequest {
     pub verifier: String,
     #[serde(rename = "expectedState")]
     pub expected_state: Option<String>,
+    #[serde(rename = "redirectUri")]
+    pub redirect_uri: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub enum OpenAIOAuthCompletePayload {
+    Wrapped { request: OpenAIOAuthCompleteRequest },
+    Direct(OpenAIOAuthCompleteRequest),
 }
 
 #[derive(Serialize)]
@@ -198,9 +245,14 @@ pub struct OpenAIOAuthCompleteResponse {
 
 #[tauri::command]
 pub async fn llm_openai_oauth_complete(
-    request: OpenAIOAuthCompleteRequest,
+    payload: OpenAIOAuthCompletePayload,
     state: State<'_, LlmState>,
 ) -> Result<OpenAIOAuthCompleteResponse, String> {
+    let request = match payload {
+        OpenAIOAuthCompletePayload::Wrapped { request } => request,
+        OpenAIOAuthCompletePayload::Direct(request) => request,
+    };
+
     // Validate state for CSRF protection
     let expected_state = request
         .expected_state
@@ -211,11 +263,15 @@ pub async fn llm_openai_oauth_complete(
 
     let client = reqwest::Client::new();
 
+    let redirect_uri = request
+        .redirect_uri
+        .unwrap_or_else(|| OPENAI_REDIRECT_URI.to_string());
+
     let params = [
         ("grant_type", "authorization_code"),
         ("client_id", OPENAI_CLIENT_ID),
         ("code", &request.code),
-        ("redirect_uri", OPENAI_REDIRECT_URI),
+        ("redirect_uri", &redirect_uri),
         ("code_verifier", &request.verifier),
     ];
 
@@ -248,7 +304,7 @@ pub async fn llm_openai_oauth_complete(
 
     let refresh_token = token_response["refresh_token"]
         .as_str()
-        .unwrap_or("")
+        .ok_or("Missing refresh_token in response")?
         .to_string();
 
     let expires_in = token_response["expires_in"].as_i64().unwrap_or(3600);
@@ -294,17 +350,15 @@ pub struct OpenAIOAuthRefreshResponse {
     pub account_id: Option<String>,
 }
 
-#[tauri::command]
-pub async fn llm_openai_oauth_refresh(
-    request: OpenAIOAuthRefreshRequest,
-    state: State<'_, LlmState>,
+pub(crate) async fn refresh_openai_oauth_tokens(
+    client: &reqwest::Client,
+    refresh_token: &str,
+    api_keys: &ApiKeyManager,
 ) -> Result<OpenAIOAuthRefreshResponse, String> {
-    let client = reqwest::Client::new();
-
     let params = [
         ("grant_type", "refresh_token"),
         ("client_id", OPENAI_CLIENT_ID),
-        ("refresh_token", &request.refresh_token),
+        ("refresh_token", refresh_token),
     ];
 
     let response = client
@@ -338,15 +392,13 @@ pub async fn llm_openai_oauth_refresh(
     let refresh_token = token_response["refresh_token"]
         .as_str()
         .map(|s| s.to_string())
-        .unwrap_or(request.refresh_token);
+        .unwrap_or(refresh_token.to_string());
 
     let expires_in = token_response["expires_in"].as_i64().unwrap_or(3600);
     let expires_at = chrono::Utc::now().timestamp() + expires_in;
 
     let account_id = extract_openai_account_id(&access_token);
 
-    // Save to settings
-    let api_keys = state.api_keys.lock().await;
     api_keys
         .set_setting("openai_oauth_access_token", &access_token)
         .await?;
@@ -366,6 +418,34 @@ pub async fn llm_openai_oauth_refresh(
         expires_at,
         account_id,
     })
+}
+
+#[tauri::command]
+pub async fn llm_openai_oauth_refresh(
+    request: OpenAIOAuthRefreshRequest,
+    state: State<'_, LlmState>,
+) -> Result<OpenAIOAuthRefreshResponse, String> {
+    let api_keys = state.api_keys.lock().await;
+    let client = reqwest::Client::new();
+    refresh_openai_oauth_tokens(&client, &request.refresh_token, &api_keys).await
+}
+
+#[tauri::command]
+pub async fn llm_openai_oauth_refresh_from_store(
+    state: State<'_, LlmState>,
+) -> Result<OpenAIOAuthRefreshResponse, String> {
+    let api_keys = state.api_keys.lock().await;
+    let refresh_token = api_keys
+        .get_setting("openai_oauth_refresh_token")
+        .await?
+        .unwrap_or_default();
+
+    if refresh_token.trim().is_empty() {
+        return Err("OpenAI OAuth refresh token missing".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    refresh_openai_oauth_tokens(&client, &refresh_token, &api_keys).await
 }
 
 #[tauri::command]
@@ -489,7 +569,7 @@ pub async fn llm_claude_oauth_complete(
 
     let refresh_token = token_response["refresh_token"]
         .as_str()
-        .unwrap_or("")
+        .ok_or("Missing refresh_token in response")?
         .to_string();
 
     let expires_in = token_response["expires_in"].as_i64().unwrap_or(3600);
@@ -987,6 +1067,8 @@ pub struct OAuthProviderStatus {
     pub account_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_connected: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_refresh_token: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -1011,6 +1093,10 @@ pub async fn llm_oauth_status(state: State<'_, LlmState>) -> Result<OAuthStatusR
         .get_setting("openai_oauth_access_token")
         .await?
         .filter(|s| !s.is_empty());
+    let openai_refresh = api_keys
+        .get_setting("openai_oauth_refresh_token")
+        .await?
+        .filter(|s| !s.is_empty());
     let openai_expires = api_keys
         .get_setting("openai_oauth_expires_at")
         .await?
@@ -1020,11 +1106,12 @@ pub async fn llm_oauth_status(state: State<'_, LlmState>) -> Result<OAuthStatusR
         .await?
         .filter(|s| !s.is_empty());
 
-    let openai = if openai_access.is_some() {
+    let openai = if openai_access.is_some() || openai_refresh.is_some() {
         Some(OAuthProviderStatus {
             expires_at: openai_expires,
             account_id: openai_account,
             is_connected: Some(true),
+            has_refresh_token: Some(openai_refresh.is_some()),
         })
     } else {
         None
@@ -1045,6 +1132,7 @@ pub async fn llm_oauth_status(state: State<'_, LlmState>) -> Result<OAuthStatusR
             expires_at: anthropic_expires,
             account_id: None,
             is_connected: Some(true),
+            has_refresh_token: None,
         })
     } else {
         None
@@ -1104,6 +1192,52 @@ pub async fn llm_oauth_status(state: State<'_, LlmState>) -> Result<OAuthStatusR
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_openai_oauth_complete_payload_wrapped() {
+        let payload = json!({
+            "request": {
+                "code": "code-123",
+                "verifier": "verifier-123",
+                "expectedState": "state-123",
+                "redirectUri": "http://localhost:1455/auth/callback"
+            }
+        });
+        let parsed: OpenAIOAuthCompletePayload =
+            serde_json::from_value(payload).expect("parse wrapped payload");
+        match parsed {
+            OpenAIOAuthCompletePayload::Wrapped { request } => {
+                assert_eq!(request.code, "code-123");
+                assert_eq!(request.verifier, "verifier-123");
+                assert_eq!(request.expected_state.as_deref(), Some("state-123"));
+                assert_eq!(
+                    request.redirect_uri.as_deref(),
+                    Some("http://localhost:1455/auth/callback")
+                );
+            }
+            OpenAIOAuthCompletePayload::Direct(_) => panic!("expected wrapped payload"),
+        }
+    }
+
+    #[test]
+    fn test_openai_oauth_complete_payload_direct() {
+        let payload = json!({
+            "code": "code-456",
+            "verifier": "verifier-456",
+            "expectedState": "state-456"
+        });
+        let parsed: OpenAIOAuthCompletePayload =
+            serde_json::from_value(payload).expect("parse direct payload");
+        match parsed {
+            OpenAIOAuthCompletePayload::Direct(request) => {
+                assert_eq!(request.code, "code-456");
+                assert_eq!(request.verifier, "verifier-456");
+                assert_eq!(request.expected_state.as_deref(), Some("state-456"));
+            }
+            OpenAIOAuthCompletePayload::Wrapped { .. } => panic!("expected direct payload"),
+        }
+    }
 
     #[test]
     fn test_code_challenge() {

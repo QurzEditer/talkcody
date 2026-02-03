@@ -40,6 +40,7 @@ export function GitHubCopilotUsageTab() {
 
   // GitHub Copilot OAuth state
   const isOAuthConnected = useGitHubCopilotOAuthStore((state) => state.isConnected);
+  const initializeOAuth = useGitHubCopilotOAuthStore((state) => state.initialize);
 
   // Usage state
   const usageData = useGitHubCopilotUsageStore((state) => state.usageData);
@@ -47,6 +48,11 @@ export function GitHubCopilotUsageTab() {
   const error = useGitHubCopilotUsageStore((state) => state.error);
   const initialize = useGitHubCopilotUsageStore((state) => state.initialize);
   const refresh = useGitHubCopilotUsageStore((state) => state.refresh);
+
+  // Initialize OAuth on mount
+  useEffect(() => {
+    void initializeOAuth();
+  }, [initializeOAuth]);
 
   // Initialize on mount
   useEffect(() => {

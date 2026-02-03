@@ -3,6 +3,7 @@
 
 import { create } from 'zustand';
 import { logger } from '@/lib/logger';
+import { isGitHubCopilotOAuthConnected } from '@/providers/oauth/github-copilot-oauth-store';
 import type { GitHubCopilotUsageData } from '@/services/github-copilot-usage-service';
 import { fetchGitHubCopilotUsage } from '@/services/github-copilot-usage-service';
 
@@ -13,6 +14,7 @@ interface GitHubCopilotUsageState {
   lastFetchedAt: number | null;
   autoRefreshEnabled: boolean;
   isInitialized: boolean;
+  lastAuthConnected: boolean | null;
 }
 
 interface GitHubCopilotUsageActions {
@@ -37,6 +39,7 @@ export const useGitHubCopilotUsageStore = create<GitHubCopilotUsageStore>((set, 
   lastFetchedAt: null,
   autoRefreshEnabled: false,
   isInitialized: false,
+  lastAuthConnected: null,
 
   initialize: async () => {
     const { isInitialized } = get();
@@ -49,19 +52,36 @@ export const useGitHubCopilotUsageStore = create<GitHubCopilotUsageStore>((set, 
   },
 
   fetchUsage: async () => {
-    const { isLoading, lastFetchedAt } = get();
+    const { isLoading, lastFetchedAt, lastAuthConnected } = get();
 
     if (isLoading) {
       logger.debug('[GitHubCopilotUsageStore] Already fetching, skipping');
       return;
     }
 
-    if (lastFetchedAt && Date.now() - lastFetchedAt < CACHE_DURATION_MS) {
+    const isConnected = await isGitHubCopilotOAuthConnected();
+
+    if (!isConnected) {
+      if (lastAuthConnected !== false) {
+        logger.info('[GitHubCopilotUsageStore] OAuth disconnected, clearing usage data');
+        set({
+          usageData: null,
+          lastFetchedAt: null,
+          error: null,
+          lastAuthConnected: false,
+        });
+      }
+      return;
+    }
+
+    const shouldForceRefresh = lastAuthConnected === false;
+
+    if (!shouldForceRefresh && lastFetchedAt && Date.now() - lastFetchedAt < CACHE_DURATION_MS) {
       logger.debug('[GitHubCopilotUsageStore] Using cached data');
       return;
     }
 
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, lastAuthConnected: true });
 
     try {
       logger.info('[GitHubCopilotUsageStore] Fetching usage data');
@@ -113,6 +133,7 @@ export const useGitHubCopilotUsageStore = create<GitHubCopilotUsageStore>((set, 
       usageData: null,
       lastFetchedAt: null,
       error: null,
+      lastAuthConnected: null,
     });
   },
 

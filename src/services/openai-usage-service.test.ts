@@ -87,4 +87,17 @@ describe('fetchOpenAIUsage', () => {
 
     await expect(fetchOpenAIUsage()).rejects.toThrow('OAuth not connected');
   });
+
+  it('should surface OAuth missing message from backend', async () => {
+    const { invoke } = await import('@tauri-apps/api/core');
+    vi.mocked(invoke).mockRejectedValue(
+      new Error(
+        'OpenAI OAuth not connected. Please connect your OpenAI account in settings.'
+      )
+    );
+
+    await expect(fetchOpenAIUsage()).rejects.toThrow(
+      'OpenAI OAuth not connected. Please connect your OpenAI account in settings.'
+    );
+  });
 });
