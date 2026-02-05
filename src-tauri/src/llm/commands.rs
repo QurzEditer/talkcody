@@ -27,9 +27,18 @@ pub async fn llm_stream_text(
         .request_id
         .clone()
         .unwrap_or_else(|| "0".to_string());
-    let request_id = handler
-        .stream_completion(window, request, request_id)
-        .await?;
+
+    let request_id_clone = request_id.clone();
+    // Spawn the streaming process in a background task so the command returns immediately
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = handler
+            .stream_completion(window, request, request_id_clone)
+            .await
+        {
+            log::error!("[llm_stream_text] Stream error: {}", e);
+        }
+    });
+
     Ok(StreamResponse { request_id })
 }
 

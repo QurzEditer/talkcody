@@ -327,6 +327,8 @@ pub(crate) fn parse_openai_oauth_event_legacy(
     data: &str,
     state: &mut ProtocolStreamState,
 ) -> Result<Option<StreamEvent>, String> {
+    let payload: Value = serde_json::from_str(data).map_err(|e| e.to_string())?;
+
     let emit_tool_calls = |state: &mut ProtocolStreamState, force: bool| {
         for key in state.tool_call_order.clone() {
             if state.emitted_tool_calls.contains(&key) {
@@ -412,6 +414,9 @@ pub(crate) fn parse_openai_oauth_event_legacy(
     }
 
     let mut resolved_event = event_type.map(|value| value.to_string());
+    if resolved_event.as_deref() == Some("message") {
+        resolved_event = None;
+    }
     if resolved_event.is_none() {
         resolved_event = payload
             .get("type")
@@ -435,13 +440,6 @@ pub(crate) fn parse_openai_oauth_event_legacy(
         Some(value) => value,
         None => return Ok(None),
     };
-
-    log::debug!(
-        "[OpenAI OAuth] Parsing event: {}, data: {}",
-        event_type,
-        data
-    );
-    log::debug!("[OpenAI OAuth] Parsed payload: {:?}", payload);
 
     match event_type.as_str() {
         "response.created" | "response.in_progress" => {

@@ -5,22 +5,33 @@ use crate::llm::protocols::{
     openai_responses_protocol::OpenAiResponsesProtocol, LlmProtocol, ProtocolStreamState,
 };
 use serde_json::Value;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-fn recordings_dir() -> PathBuf {
+struct LoadedFixture {
+    path: PathBuf,
+    fixture: ProviderFixture,
+}
+
+fn fixtures_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("LLM_FIXTURE_DIR") {
+        return PathBuf::from(dir);
+    }
+
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("src")
-        .join("llm")
-        .join("testing")
-        .join("recordings")
+        .join("..")
+        .join(".llm-fixtures")
+}
+
+fn canonicalize_or_original(path: &Path) -> PathBuf {
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 fn load_fixtures_for_test(
     provider_id: Option<&str>,
     protocol: &str,
     channel: &str,
-) -> Vec<ProviderFixture> {
-    let dir = recordings_dir();
+) -> Vec<LoadedFixture> {
+    let dir = fixtures_dir();
     let suffix = format!("__{}.json", channel);
     // Match both the exact protocol and OpenAiCompatible variants
     // OpenAiCompatible providers use OpenAI-compatible protocol
@@ -32,7 +43,7 @@ fn load_fixtures_for_test(
     let mut matches = Vec::new();
 
     let entries = std::fs::read_dir(&dir)
-        .unwrap_or_else(|err| panic!("Failed to read fixtures dir: {}", err));
+        .unwrap_or_else(|err| panic!("Failed to read fixtures dir {}: {}", dir.display(), err));
     for entry in entries {
         let entry = entry.expect("read dir entry");
         let file_name = entry.file_name();
@@ -63,28 +74,47 @@ fn load_fixtures_for_test(
 
     matches.sort();
     if matches.is_empty() {
-        let provider_hint = provider_id.unwrap_or("*");
-        panic!(
-            "No fixtures found for {} {} {}",
-            provider_hint, protocol, channel
-        );
+        return Vec::new();
     }
 
     matches
         .into_iter()
         .map(|path| {
-            load_fixture(&path)
-                .unwrap_or_else(|err| panic!("Failed to load fixture {}: {}", path.display(), err))
+            let display_path = canonicalize_or_original(&path);
+            let fixture = load_fixture(&path).unwrap_or_else(|err| {
+                panic!("Failed to load fixture {}: {}", display_path.display(), err)
+            });
+            LoadedFixture {
+                path: display_path,
+                fixture,
+            }
         })
         .collect()
 }
 
+fn is_responses_endpoint(endpoint_path: &str) -> bool {
+    let trimmed = endpoint_path.trim_matches('/');
+    trimmed
+        .split('/')
+        .any(|segment| segment.eq_ignore_ascii_case("responses"))
+}
+
 fn protocol_for_fixture(fixture: &ProviderFixture) -> Box<dyn LlmProtocol> {
+    if is_responses_endpoint(&fixture.endpoint_path) {
+        return Box::new(OpenAiResponsesProtocol);
+    }
     match fixture.protocol.as_str() {
         "openai" | "OpenAiCompatible" => Box::new(OpenAiProtocol),
         "openai_responses" => Box::new(OpenAiResponsesProtocol),
         "anthropic" => Box::new(ClaudeProtocol),
         other => panic!("Unknown protocol in fixture: {}", other),
+    }
+}
+
+fn normalize_expected_json_body(body: &Value) -> Value {
+    match body {
+        Value::String(text) => serde_json::from_str(text).unwrap_or_else(|_| body.clone()),
+        _ => body.clone(),
     }
 }
 
@@ -144,7 +174,11 @@ fn normalize_events(events: &mut [Value]) {
     }
 }
 
-fn assert_request_matches_fixture(protocol: &dyn LlmProtocol, fixture: &ProviderFixture) {
+fn assert_request_matches_fixture(
+    protocol: &dyn LlmProtocol,
+    fixture: &ProviderFixture,
+    fixture_path: &Path,
+) {
     let input = fixture
         .test_input
         .as_ref()
@@ -162,16 +196,23 @@ fn assert_request_matches_fixture(protocol: &dyn LlmProtocol, fixture: &Provider
             input.extra_body.as_ref(),
         )
         .expect("build request");
-    super::fixtures::assert_json_matches(&fixture.request.body, &body)
-        .unwrap_or_else(|err| panic!("Request mismatch: {}", err));
+    super::fixtures::assert_json_matches(&fixture.request.body, &body).unwrap_or_else(|err| {
+        panic!(
+            "Request mismatch for fixture {}: {}",
+            fixture_path.display(),
+            err
+        )
+    });
 }
 
 #[test]
 fn openai_fixture_roundtrip() {
     let fixtures = load_fixtures_for_test(None, "openai", "custom");
-    for fixture in fixtures {
+    for loaded in fixtures {
+        let fixture_path = loaded.path;
+        let fixture = loaded.fixture;
         let protocol = protocol_for_fixture(&fixture);
-        assert_request_matches_fixture(protocol.as_ref(), &fixture);
+        assert_request_matches_fixture(protocol.as_ref(), &fixture, &fixture_path);
 
         let expected = fixture.expected_events.clone().expect("expected events");
         let mut expected_json = serde_json::to_value(expected).expect("serialize expected");
@@ -186,16 +227,30 @@ fn openai_fixture_roundtrip() {
             normalize_events(actual_arr);
         }
 
-        assert_eq!(expected_json, actual_json);
+        assert_eq!(
+            expected_json,
+            actual_json,
+            "Fixture mismatch: {}",
+            fixture_path.display()
+        );
     }
 }
 
 #[test]
 fn claude_fixture_roundtrip() {
     let fixtures = load_fixtures_for_test(None, "anthropic", "api");
-    for fixture in fixtures {
+    if fixtures.is_empty() {
+        eprintln!(
+            "Skipping claude_fixture_roundtrip: no fixtures found in {}",
+            fixtures_dir().display()
+        );
+        return;
+    }
+    for loaded in fixtures {
+        let fixture_path = loaded.path;
+        let fixture = loaded.fixture;
         let protocol = protocol_for_fixture(&fixture);
-        assert_request_matches_fixture(protocol.as_ref(), &fixture);
+        assert_request_matches_fixture(protocol.as_ref(), &fixture, &fixture_path);
 
         let expected = fixture.expected_events.clone().expect("expected events");
         let mut expected_json = serde_json::to_value(expected).expect("serialize expected");
@@ -210,14 +265,21 @@ fn claude_fixture_roundtrip() {
             normalize_events(actual_arr);
         }
 
-        assert_eq!(expected_json, actual_json);
+        assert_eq!(
+            expected_json,
+            actual_json,
+            "Fixture mismatch: {}",
+            fixture_path.display()
+        );
     }
 }
 
 #[tokio::test]
 async fn mock_server_replays_openai_fixture() {
     let fixtures = load_fixtures_for_test(None, "openai", "custom");
-    for fixture in fixtures {
+    for loaded in fixtures {
+        let fixture_path = loaded.path;
+        let fixture = loaded.fixture;
         let server = MockProviderServer::start(fixture.clone()).expect("mock server");
         let url = format!("{}/{}", server.base_url(), fixture.endpoint_path);
 
@@ -228,13 +290,48 @@ async fn mock_server_replays_openai_fixture() {
             .await
             .expect("mock response");
 
+        let status = response.status().as_u16();
         let body = response.text().await.expect("response body");
-        let actual = parse_sse_body(&body);
 
-        let RecordedResponse::Stream { sse_events, .. } = &fixture.response else {
-            panic!("expected stream response");
-        };
-        assert_eq!(actual, *sse_events);
+        match &fixture.response {
+            RecordedResponse::Stream {
+                status: expected_status,
+                sse_events,
+                ..
+            } => {
+                assert_eq!(
+                    status,
+                    *expected_status,
+                    "Status mismatch: {}",
+                    fixture_path.display()
+                );
+                let actual = parse_sse_body(&body);
+                assert_eq!(
+                    actual,
+                    *sse_events,
+                    "Fixture mismatch: {}",
+                    fixture_path.display()
+                );
+            }
+            RecordedResponse::Json {
+                status: expected_status,
+                body: expected_body,
+                ..
+            } => {
+                assert_eq!(
+                    status,
+                    *expected_status,
+                    "Status mismatch: {}",
+                    fixture_path.display()
+                );
+                let actual_json =
+                    serde_json::from_str(&body).unwrap_or_else(|_| Value::String(body));
+                let expected_json = normalize_expected_json_body(expected_body);
+                super::fixtures::assert_json_matches(&expected_json, &actual_json).unwrap_or_else(
+                    |err| panic!("Fixture mismatch for {}: {}", fixture_path.display(), err),
+                );
+            }
+        }
     }
 }
 

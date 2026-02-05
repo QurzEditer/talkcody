@@ -390,6 +390,9 @@ impl StreamHandler {
         let mut chunk_count = 0;
         let mut response_text = String::new();
         let stream_timeout = Duration::from_secs(300); // Timeout between chunks
+        const STREAM_MAX_RETRIES: u32 = 3;
+        const STREAM_BASE_DELAY_MS: u64 = 1000;
+        let mut stream_error_retries: u32 = 0;
 
         log::info!("[LLM Stream {}] Starting to read stream...", request_id);
 
@@ -445,11 +448,29 @@ impl StreamHandler {
             let bytes = match chunk {
                 Ok(b) => b,
                 Err(e) => {
+                    let err_msg = e.to_string();
+                    if Self::is_decode_response_body_error(&err_msg)
+                        && stream_error_retries < STREAM_MAX_RETRIES
+                    {
+                        let delay_ms = STREAM_BASE_DELAY_MS * (1u64 << stream_error_retries);
+                        log::warn!(
+                            "[LLM Stream {}] Stream decode error at chunk {}, retrying {}/{} after {}ms: {}",
+                            request_id,
+                            chunk_count,
+                            stream_error_retries + 1,
+                            STREAM_MAX_RETRIES,
+                            delay_ms,
+                            err_msg
+                        );
+                        stream_error_retries += 1;
+                        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                        continue;
+                    }
                     log::error!(
                         "[LLM Stream {}] Stream error at chunk {}: {}",
                         request_id,
                         chunk_count,
-                        e
+                        err_msg
                     );
                     // Record error in tracing span
                     if let Some(ref span_id) = trace_span_id {
@@ -460,17 +481,19 @@ impl StreamHandler {
                             Some(serde_json::json!({
                                 "error_type": "stream_error",
                                 "chunk_count": chunk_count,
-                                "message": format!("Stream error: {}", e),
+                                "message": format!("Stream error: {}", err_msg),
                             })),
                         );
                     }
                     let error_event = StreamEvent::Error {
-                        message: format!("Stream error: {}", e),
+                        message: format!("Stream error: {}", err_msg),
                     };
                     let _ = window.emit(&event_name, &error_event);
-                    return Err(format!("Stream error: {}", e));
+                    return Err(format!("Stream error: {}", err_msg));
                 }
             };
+
+            stream_error_retries = 0;
 
             if bytes.is_empty() {
                 log::debug!("[LLM Stream {}] Received empty chunk", request_id);
@@ -816,6 +839,11 @@ impl StreamHandler {
         })
     }
 
+    fn is_decode_response_body_error(error: &str) -> bool {
+        let error = error.to_ascii_lowercase();
+        error.contains("error decoding response body")
+    }
+
     fn append_text_delta(target: &mut String, event: &StreamEvent) {
         if let StreamEvent::TextDelta { text } = event {
             target.push_str(text);
@@ -826,10 +854,10 @@ impl StreamHandler {
         &self,
         window: &tauri::Window,
         event_name: &str,
-        _request_id: &str,
+        request_id: &str,
         event: &StreamEvent,
     ) {
-        // log::info!("[LLM Stream {}] Emitting event: {:?}", request_id, event);
+        log::info!("[LLM Stream {}] Emitting event: {:?}", request_id, event);
         let _ = window.emit(event_name, event);
     }
 
@@ -913,6 +941,19 @@ mod tests {
     use serde_json::json;
     use std::sync::Arc;
     use tempfile::TempDir;
+
+    #[test]
+    fn detects_decode_response_body_error() {
+        assert!(StreamHandler::is_decode_response_body_error(
+            "error decoding response body"
+        ));
+        assert!(StreamHandler::is_decode_response_body_error(
+            "Error decoding response body"
+        ));
+        assert!(!StreamHandler::is_decode_response_body_error(
+            "connection reset by peer"
+        ));
+    }
 
     #[tokio::test]
     async fn openai_responses_model_routes_to_responses_endpoint() {
@@ -1564,6 +1605,84 @@ mod tests {
             matches!(done_event, Some(StreamEvent::Done { .. })),
             "Expected Done event after Usage, got {:?}",
             done_event
+        );
+    }
+
+    #[test]
+    fn openai_oauth_message_event_uses_payload_type_for_text_deltas() {
+        let mut state = ProtocolStreamState::default();
+        let delta1 = json!({
+            "type": "response.output_text.delta",
+            "delta": "Hello"
+        });
+
+        let event1 =
+            parse_openai_oauth_event_legacy(Some("message"), &delta1.to_string(), &mut state)
+                .expect("parse delta1")
+                .expect("event1");
+        assert!(matches!(event1, StreamEvent::TextStart));
+
+        let event2 =
+            parse_openai_oauth_event_legacy(Some("message"), &delta1.to_string(), &mut state)
+                .expect("parse delta1 repeat")
+                .expect("event2");
+        match event2 {
+            StreamEvent::TextDelta { text } => assert_eq!(text, "Hello"),
+            _ => panic!("Expected TextDelta for 'Hello'"),
+        }
+
+        let delta2 = json!({
+            "type": "response.output_text.delta",
+            "delta": " World"
+        });
+        let event3 =
+            parse_openai_oauth_event_legacy(Some("message"), &delta2.to_string(), &mut state)
+                .expect("parse delta2")
+                .expect("event3");
+        match event3 {
+            StreamEvent::TextDelta { text } => assert_eq!(text, "Hello"),
+            _ => panic!("Expected TextDelta for pending 'Hello'"),
+        }
+
+        let pending = state.pending_events.get(0).cloned();
+        match pending {
+            Some(StreamEvent::TextDelta { text }) => assert_eq!(text, " World"),
+            _ => panic!("Expected pending TextDelta for ' World'"),
+        }
+    }
+
+    #[test]
+    fn openai_oauth_message_event_infers_response_completed() {
+        let mut state = ProtocolStreamState::default();
+        let payload = json!({
+            "type": "response.completed",
+            "response": {
+                "usage": { "input_tokens": 7, "output_tokens": 11, "total_tokens": 18 }
+            }
+        });
+
+        let first =
+            parse_openai_oauth_event_legacy(Some("message"), &payload.to_string(), &mut state)
+                .expect("parse completed")
+                .expect("event");
+        match first {
+            StreamEvent::Usage {
+                input_tokens,
+                output_tokens,
+                total_tokens,
+                ..
+            } => {
+                assert_eq!(input_tokens, 7);
+                assert_eq!(output_tokens, 11);
+                assert_eq!(total_tokens, Some(18));
+            }
+            _ => panic!("Unexpected event"),
+        }
+
+        let pending = state.pending_events.get(0).cloned();
+        assert!(
+            matches!(pending, Some(StreamEvent::Done { .. })),
+            "Expected Done event after Usage"
         );
     }
 

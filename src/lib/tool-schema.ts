@@ -1,6 +1,10 @@
 import { convertSchema, type JSONSchema7 } from '@/lib/json-schema/minimal-zod-converter';
 import { logger } from '@/lib/logger';
 
+type ToolSchemaOptions = {
+  modelIdentifier?: string | null;
+};
+
 const FALLBACK_SCHEMA: JSONSchema7 = {
   type: 'object',
   properties: {},
@@ -50,6 +54,65 @@ export function toToolInputJsonSchema(inputSchema: unknown): JSONSchema7 {
     error: 'Unsupported input schema',
   });
   return FALLBACK_SCHEMA;
+}
+
+function isGeminiModel(modelIdentifier?: string | null): boolean {
+  if (!modelIdentifier) return false;
+  const normalized = modelIdentifier.toLowerCase();
+  return normalized.includes('gemini') || normalized.includes('@google');
+}
+
+function sanitizeGeminiSchema(schema: JSONSchema7): JSONSchema7 {
+  const visit = (value: JSONSchema7 | unknown): JSONSchema7 | unknown => {
+    if (!value || typeof value !== 'object') {
+      return value;
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((entry) => visit(entry));
+    }
+
+    const record = value as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+
+    for (const [key, entry] of Object.entries(record)) {
+      if (key === 'enum' && Array.isArray(entry)) {
+        const stringified = entry.map((enumValue) => String(enumValue));
+        result[key] = stringified;
+
+        const currentType = result.type ?? record.type;
+        if (currentType === 'integer' || currentType === 'number') {
+          result.type = 'string';
+        }
+        continue;
+      }
+
+      if (entry && typeof entry === 'object') {
+        result[key] = visit(entry);
+        continue;
+      }
+
+      result[key] = entry;
+    }
+
+    if (
+      result.type === 'object' &&
+      result.properties &&
+      Array.isArray(result.required) &&
+      typeof result.properties === 'object'
+    ) {
+      const properties = result.properties as Record<string, unknown>;
+      result.required = result.required.filter((field) => field in properties);
+    }
+
+    if (result.type === 'array' && result.items == null) {
+      result.items = {};
+    }
+
+    return result as JSONSchema7;
+  };
+
+  return visit(schema) as JSONSchema7;
 }
 
 /**
@@ -110,10 +173,14 @@ export interface OpenAIToolDefinition {
 export function toOpenAIToolDefinition(
   name: string,
   description: string | null | undefined,
-  inputSchema: unknown
+  inputSchema: unknown,
+  options?: ToolSchemaOptions
 ): OpenAIToolDefinition {
   // Convert to JSON Schema if needed
-  const jsonSchema = toToolInputJsonSchema(inputSchema);
+  let jsonSchema = toToolInputJsonSchema(inputSchema);
+  if (isGeminiModel(options?.modelIdentifier)) {
+    jsonSchema = sanitizeGeminiSchema(jsonSchema);
+  }
 
   // Normalize the parameter schema
   const normalizedSchema = normalizeParameterSchema(jsonSchema);

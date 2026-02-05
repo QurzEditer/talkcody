@@ -735,7 +735,9 @@ export class LLMService {
 
               const tools = Object.entries(toolsForAI).map(([name, tool]) => {
                 const toolDef = tool as { description?: string; inputSchema?: unknown };
-                return toOpenAIToolDefinition(name, toolDef.description, toolDef.inputSchema);
+                return toOpenAIToolDefinition(name, toolDef.description, toolDef.inputSchema, {
+                  modelIdentifier: model,
+                });
               });
 
               const traceContext = createLlmTraceContext(

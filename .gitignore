@@ -98,4 +98,3 @@ docs/.vercel/
 .vercel
 .env*.local
 .vite/
-.llm-fixtures

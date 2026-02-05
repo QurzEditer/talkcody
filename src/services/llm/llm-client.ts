@@ -31,7 +31,7 @@ export class LlmClient {
 
     // Generate request ID first and set up listener BEFORE calling Rust
     // This prevents race condition where events are emitted before listener is ready
-    const requestId = generateId(16);
+    const requestId = request.requestId || generateId(16);
     const eventName = `llm-stream-${requestId}`;
     const stream = new LlmEventStream();
     const queue = createEventQueue<StreamEvent>();

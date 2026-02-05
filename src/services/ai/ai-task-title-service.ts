@@ -11,7 +11,6 @@ export interface TitleGenerationResult {
 class AITaskTitleService {
   async generateTitle(userInput: string): Promise<TitleGenerationResult | null> {
     try {
-      logger.info('generateTitle for user input:', userInput);
       const startTime = performance.now();
 
       if (!userInput || userInput.trim().length === 0) {

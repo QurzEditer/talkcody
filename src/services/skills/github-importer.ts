@@ -20,6 +20,20 @@ import { logger } from '@/lib/logger';
 import { getAgentSkillService } from './agent-skill-service';
 import { SkillMdParser } from './skill-md-parser';
 
+const SHELL_SCOPE_BLOCKED = 'program not allowed on the configured shell scope';
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function isGitBlockedByShellScope(error: unknown): boolean {
+  const message = getErrorMessage(error);
+  return message.includes(SHELL_SCOPE_BLOCKED) && message.includes('git');
+}
+
 /**
  * GitHub repository information parsed from URL
  */
@@ -125,14 +139,29 @@ export class GitHubImporter {
   /**
    * Check if git is available on the system
    */
-  static async isGitAvailable(): Promise<boolean> {
+  static async checkGitAvailability(): Promise<{
+    available: boolean;
+    blockedByShellScope: boolean;
+  }> {
     try {
       const result = await Command.create('git', ['--version']).execute();
-      return result.code === 0;
+      return { available: result.code === 0, blockedByShellScope: false };
     } catch (error) {
+      if (isGitBlockedByShellScope(error)) {
+        logger.warn('Git blocked by shell scope:', error);
+        return { available: false, blockedByShellScope: true };
+      }
       logger.warn('Git not found:', error);
-      return false;
+      return { available: false, blockedByShellScope: false };
     }
+  }
+
+  /**
+   * Check if git is available on the system
+   */
+  static async isGitAvailable(): Promise<boolean> {
+    const { available } = await GitHubImporter.checkGitAvailability();
+    return available;
   }
 
   /**
@@ -531,11 +560,12 @@ export class GitHubImporter {
         logger.warn('GitHub API rate limit exceeded, falling back to git clone method');
 
         // Check if git is available
-        const gitAvailable = await GitHubImporter.isGitAvailable();
-        if (!gitAvailable) {
-          throw new Error(
-            'GitHub API rate limit exceeded and git is not available. Please install git or wait for rate limit to reset.'
-          );
+        const availability = await GitHubImporter.checkGitAvailability();
+        if (!availability.available) {
+          const scopeHint = availability.blockedByShellScope
+            ? ' Git is blocked by the app shell scope. Please enable git in the Tauri shell allowlist or wait for rate limit to reset.'
+            : ' Please install git or wait for rate limit to reset.';
+          throw new Error(`GitHub API rate limit exceeded and git is not available.${scopeHint}`);
         }
 
         // Fallback to git clone method

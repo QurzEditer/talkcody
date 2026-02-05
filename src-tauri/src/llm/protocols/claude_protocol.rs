@@ -208,8 +208,22 @@ impl LlmProtocol for ClaudeProtocol {
         data: &str,
         state: &mut ProtocolStreamState,
     ) -> Result<Option<StreamEvent>, String> {
-        let event_type = event_type.unwrap_or("message");
         let payload: Value = serde_json::from_str(data).map_err(|e| e.to_string())?;
+        let mut resolved_event = event_type.and_then(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() || trimmed == "message" {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        });
+        if resolved_event.is_none() {
+            resolved_event = payload
+                .get("type")
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string());
+        }
+        let event_type = resolved_event.as_deref().unwrap_or("message");
 
         match event_type {
             "content_block_start" => {
@@ -425,6 +439,54 @@ mod tests {
     use super::*;
     use crate::llm::protocols::ProtocolStreamState;
     use serde_json::json;
+
+    #[test]
+    fn resolves_event_type_from_payload_when_event_is_message() {
+        let protocol = ClaudeProtocol;
+        let mut state = ProtocolStreamState::default();
+
+        let delta = json!({
+            "type": "content_block_delta",
+            "delta": {
+                "type": "text_delta",
+                "text": "Hello"
+            }
+        });
+
+        let event = LlmProtocol::parse_stream_event(
+            &protocol,
+            Some("message"),
+            &delta.to_string(),
+            &mut state,
+        )
+        .unwrap();
+
+        match event {
+            Some(StreamEvent::TextDelta { text }) => assert_eq!(text, "Hello"),
+            _ => panic!("Expected TextDelta event"),
+        }
+    }
+
+    #[test]
+    fn resolves_event_type_from_payload_when_event_is_missing() {
+        let protocol = ClaudeProtocol;
+        let mut state = ProtocolStreamState::default();
+
+        let payload = json!({
+            "type": "message_stop"
+        });
+
+        let event =
+            LlmProtocol::parse_stream_event(&protocol, None, &payload.to_string(), &mut state)
+                .unwrap();
+
+        match event {
+            Some(StreamEvent::Done { finish_reason }) => {
+                assert_eq!(finish_reason, None);
+            }
+            _ => panic!("Expected Done event"),
+        }
+    }
 
     #[test]
     fn emits_tool_call_from_index_when_content_block_stop_has_no_id() {

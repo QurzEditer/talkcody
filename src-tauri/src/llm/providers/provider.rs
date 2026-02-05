@@ -134,6 +134,13 @@ pub trait Provider: Send + Sync {
     /// Build the request body
     /// Provider can override this for special request formats (e.g., OpenAI OAuth/Codex)
     async fn build_request(&self, ctx: &ProviderContext<'_>) -> Result<Value, String> {
+        // Google OpenAI-compatible endpoint rejects top_k.
+        let drop_top_k = ctx.provider_config.id.eq_ignore_ascii_case("google")
+            || ctx
+                .provider_config
+                .base_url
+                .contains("generativelanguage.googleapis.com");
+        let top_k = if drop_top_k { None } else { ctx.top_k };
         let request_ctx = RequestBuildContext {
             model: ctx.model,
             messages: ctx.messages,
@@ -141,7 +148,7 @@ pub trait Provider: Send + Sync {
             temperature: ctx.temperature,
             max_tokens: ctx.max_tokens,
             top_p: ctx.top_p,
-            top_k: ctx.top_k,
+            top_k,
             provider_options: ctx.provider_options,
             extra_body: ctx.provider_config.extra_body.as_ref(),
         };

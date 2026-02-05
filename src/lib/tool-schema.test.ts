@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { toToolInputJsonSchema, toOpenAIToolDefinition } from './tool-schema';
 
+const createGeminiToolDefinition = (schema: unknown) =>
+  toOpenAIToolDefinition('geminiTool', 'Gemini tool', schema, {
+    modelIdentifier: 'gemini-1.5-pro@google',
+  });
+
+const createNonGeminiToolDefinition = (schema: unknown) =>
+  toOpenAIToolDefinition('nonGeminiTool', 'Non-gemini tool', schema, {
+    modelIdentifier: 'gpt-4@openai',
+  });
+
 describe('toToolInputJsonSchema', () => {
   it('converts Zod schema to JSON schema', () => {
     const inputSchema = z.object({
@@ -138,7 +148,7 @@ describe('toToolInputJsonSchema', () => {
 
   it('converts to OpenAI tool definition format', () => {
     const toolDef = toOpenAIToolDefinition('testTool', 'A test tool', z.object({ message: z.string() }));
-    
+
     expect(toolDef).toBeDefined();
     expect(toolDef.type).toBe('function');
     expect(toolDef.name).toBe('testTool');
@@ -147,5 +157,123 @@ describe('toToolInputJsonSchema', () => {
     expect(toolDef.parameters).toBeDefined();
     expect(toolDef.parameters.type).toBe('object');
     expect(toolDef.parameters.additionalProperties).toBe(false);
+  });
+
+  it('stringifies enum values for Gemini and flips numeric types to string', () => {
+    const toolDef = createGeminiToolDefinition({
+      type: 'object',
+      properties: {
+        mode: {
+          type: 'integer',
+          enum: [1, 2, 3],
+        },
+      },
+      required: ['mode'],
+    });
+
+    const modeSchema = (toolDef.parameters.properties as Record<string, unknown>)
+      ?.mode as Record<string, unknown>;
+
+    expect(modeSchema).toEqual(
+      expect.objectContaining({
+        type: 'string',
+        enum: ['1', '2', '3'],
+      })
+    );
+  });
+
+  it('filters required fields to known properties for Gemini', () => {
+    const toolDef = createGeminiToolDefinition({
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+      },
+      required: ['title', 'missing'],
+    });
+
+    expect(toolDef.parameters.required).toEqual(['title']);
+  });
+
+  it('adds empty items for Gemini arrays without items', () => {
+    const toolDef = createGeminiToolDefinition({
+      type: 'object',
+      properties: {
+        tags: {
+          type: 'array',
+        },
+      },
+      required: ['tags'],
+    });
+
+    const tagsSchema = (toolDef.parameters.properties as Record<string, unknown>)
+      ?.tags as Record<string, unknown>;
+
+    expect(tagsSchema.items).toEqual({});
+  });
+
+  it('recursively sanitizes nested Gemini schemas', () => {
+    const toolDef = createGeminiToolDefinition({
+      type: 'object',
+      properties: {
+        nested: {
+          type: 'object',
+          properties: {
+            values: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  status: {
+                    type: 'number',
+                    enum: [10, 20],
+                  },
+                },
+                required: ['status', 'ghost'],
+              },
+            },
+          },
+        },
+      },
+      required: ['nested'],
+    });
+
+    const nestedSchema = (toolDef.parameters.properties as Record<string, unknown>)
+      ?.nested as Record<string, unknown>;
+    const valuesSchema = (nestedSchema.properties as Record<string, unknown>)
+      ?.values as Record<string, unknown>;
+    const itemsSchema = valuesSchema.items as Record<string, unknown>;
+    const statusSchema = (itemsSchema.properties as Record<string, unknown>)
+      ?.status as Record<string, unknown>;
+
+    expect(statusSchema).toEqual(
+      expect.objectContaining({
+        type: 'string',
+        enum: ['10', '20'],
+      })
+    );
+    expect(itemsSchema.required).toEqual(['status']);
+  });
+
+  it('does not sanitize enums for non-Gemini models', () => {
+    const toolDef = createNonGeminiToolDefinition({
+      type: 'object',
+      properties: {
+        level: {
+          type: 'integer',
+          enum: [1, 2],
+        },
+      },
+      required: ['level'],
+    });
+
+    const levelSchema = (toolDef.parameters.properties as Record<string, unknown>)
+      ?.level as Record<string, unknown>;
+
+    expect(levelSchema).toEqual(
+      expect.objectContaining({
+        type: 'integer',
+        enum: [1, 2],
+      })
+    );
   });
 });

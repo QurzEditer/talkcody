@@ -123,7 +123,7 @@ export class LLMStreamParams {
       if (id.includes('m2.1')) return 40;
       return 20;
     }
-    if (id.includes('gemini')) return 64;
+    if (id.includes('gemini')) return undefined;
     return undefined;
   }
 }

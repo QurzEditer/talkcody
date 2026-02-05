@@ -77,6 +77,18 @@ describe('GitHubImporter Fallback Logic', () => {
       expect(result).toBe(false);
     });
 
+    it('should return false when git is blocked by shell scope', async () => {
+      const { Command } = await import('@tauri-apps/plugin-shell');
+      vi.mocked(Command.create).mockReturnValueOnce({
+        execute: vi.fn().mockRejectedValue(
+          new Error('program not allowed on the configured shell scope: git')
+        ),
+      } as never);
+
+      const result = await GitHubImporter.isGitAvailable();
+      expect(result).toBe(false);
+    });
+
     it('should use direct git command without shell', async () => {
       const { Command } = await import('@tauri-apps/plugin-shell');
       const createSpy = vi.mocked(Command.create);
@@ -276,6 +288,37 @@ describe('GitHubImporter Fallback Logic', () => {
       );
     });
 
+    it('should throw error when rate limit is hit and git is blocked by shell scope', async () => {
+      const mockFetch = vi.mocked(global.fetch);
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        headers: new Headers({
+          'X-RateLimit-Reset': String(Math.floor(Date.now() / 1000) + 3600),
+        }),
+      } as Response);
+
+      const { Command } = await import('@tauri-apps/plugin-shell');
+
+      // Mock git blocked by shell scope
+      vi.mocked(Command.create).mockReturnValueOnce({
+        execute: vi.fn().mockRejectedValue(
+          new Error('program not allowed on the configured shell scope: git')
+        ),
+      } as never);
+
+      const repoInfo = {
+        owner: 'test',
+        repo: 'repo',
+        branch: 'main',
+        path: 'skills',
+      };
+
+      await expect(GitHubImporter.scanGitHubDirectory(repoInfo)).rejects.toThrow(
+        'Git is blocked by the app shell scope'
+      );
+    });
+
     it('should throw error when rate limit is hit and git is not available', async () => {
       const mockFetch = vi.mocked(global.fetch);
       mockFetch.mockResolvedValueOnce({
@@ -300,13 +343,9 @@ describe('GitHubImporter Fallback Logic', () => {
         path: 'skills',
       };
 
-      try {
-        await GitHubImporter.scanGitHubDirectory(repoInfo);
-        expect.fail('Should have thrown an error');
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain('git is not available');
-      }
+      await expect(GitHubImporter.scanGitHubDirectory(repoInfo)).rejects.toThrow(
+        'Please install git or wait for rate limit to reset'
+      );
     });
   });
 
