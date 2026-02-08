@@ -1459,6 +1459,9 @@ export interface LocaleDefinition {
     help: string;
     unknownCommand: string;
     processing: string;
+    accepted: string;
+    completed: string;
+    failed: string;
     noActiveTask: string;
     noPendingApproval: string;
     approved: string;

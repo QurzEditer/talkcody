@@ -10,8 +10,12 @@ const mocks = vi.hoisted(() => {
   const onInbound = vi.fn().mockReturnValue(inboundUnsubscribe);
   const sendMessage = vi.fn().mockResolvedValue({ messageId: '1' });
   const editMessage = vi.fn().mockResolvedValue(undefined);
+  const executionListener = vi.fn();
 
-  const executionSubscribe = vi.fn().mockReturnValue(executionUnsubscribe);
+  const executionSubscribe = vi.fn().mockImplementation((listener) => {
+    mocks.executionListener = listener;
+    return executionUnsubscribe;
+  });
   const useExecutionStore = Object.assign(vi.fn(), {
     subscribe: executionSubscribe,
     getState: vi.fn().mockReturnValue({
@@ -37,6 +41,7 @@ const mocks = vi.hoisted(() => {
     sendMessage,
     editMessage,
     executionSubscribe,
+    executionListener,
     editReviewSubscribe,
     useExecutionStore,
     useEditReviewStore,
@@ -70,6 +75,7 @@ describe('remote-chat-service', () => {
       running: boolean;
       inboundUnsubscribe: (() => void) | null;
       executionUnsubscribe: (() => void) | null;
+      executionStreamCancel: (() => void) | null;
       editReviewUnsubscribe: (() => void) | null;
       sessions: Map<string, unknown>;
       approvals: Map<string, unknown>;
@@ -78,6 +84,7 @@ describe('remote-chat-service', () => {
     service.running = false;
     service.inboundUnsubscribe = null;
     service.executionUnsubscribe = null;
+    service.executionStreamCancel = null;
     service.editReviewUnsubscribe = null;
     service.sessions.clear();
     service.approvals.clear();
@@ -98,6 +105,73 @@ describe('remote-chat-service', () => {
     expect(mocks.executionUnsubscribe).toHaveBeenCalledTimes(1);
     expect(mocks.editReviewUnsubscribe).toHaveBeenCalledTimes(1);
     expect(mocks.stopAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('streams updates while running', async () => {
+    vi.useFakeTimers();
+    const session = {
+      channelId: 'telegram',
+      chatId: '1',
+      taskId: 'task-1',
+      lastSentAt: 0,
+      sentChunks: [],
+      streamingMessageId: 'msg-1',
+      lastStatusAck: 'running',
+    };
+    const execution = {
+      taskId: 'task-1',
+      status: 'running',
+      streamingContent: 'hello world',
+    };
+
+    mocks.useExecutionStore.getState.mockReturnValue({
+      getExecution: vi.fn().mockReturnValue(execution),
+    });
+
+    // @ts-expect-error - test setup
+    remoteChatService.sessions.set('telegram:1', session);
+
+    await remoteChatService.start();
+
+    mocks.executionListener();
+    vi.advanceTimersByTime(1100);
+
+    expect(mocks.editMessage).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('sends terminal status after completion', async () => {
+    vi.useFakeTimers();
+    const session = {
+      channelId: 'telegram',
+      chatId: '1',
+      taskId: 'task-1',
+      lastSentAt: 0,
+      sentChunks: [],
+      streamingMessageId: 'msg-1',
+      lastStatusAck: 'running',
+    };
+    const execution = {
+      taskId: 'task-1',
+      status: 'completed',
+      streamingContent: 'done',
+    };
+
+    mocks.useExecutionStore.getState.mockReturnValue({
+      getExecution: vi.fn().mockReturnValue(execution),
+    });
+
+    await remoteChatService.start();
+
+    // @ts-expect-error - test setup
+    remoteChatService.sessions.set('telegram:1', session);
+
+    await mocks.executionListener();
+    vi.advanceTimersByTime(1100);
+    await Promise.resolve();
+
+    expect(mocks.sendMessage).toHaveBeenCalled();
+    vi.useRealTimers();
   });
 
   it('does not send messages when stopped', async () => {

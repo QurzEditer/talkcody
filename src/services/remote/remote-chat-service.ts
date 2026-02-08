@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { logger } from '@/lib/logger';
-import { debounce } from '@/lib/utils/debounce';
+import { throttle } from '@/lib/utils/throttle';
 import { getLocale, type SupportedLocale } from '@/locales';
 import { modelService } from '@/providers/stores/provider-store';
 import { agentRegistry } from '@/services/agents/agent-registry';
@@ -43,6 +43,7 @@ interface ChatSessionState {
   streamingMessageId?: string;
   sentChunks: string[];
   lastStreamStatus?: ExecutionStatus;
+  lastStatusAck?: ExecutionStatus | 'accepted';
 }
 
 interface PendingApprovalState {
@@ -60,6 +61,7 @@ function buildSessionKey(channelId: string, chatId: string): string {
 
 class RemoteChatService {
   private executionUnsubscribe: (() => void) | null = null;
+  private executionStreamCancel: (() => void) | null = null;
   private editReviewUnsubscribe: (() => void) | null = null;
   private running = false;
   private sessions = new Map<string, ChatSessionState>();
@@ -95,8 +97,10 @@ class RemoteChatService {
     }
 
     if (this.executionUnsubscribe) {
+      this.executionStreamCancel?.();
       this.executionUnsubscribe();
       this.executionUnsubscribe = null;
+      this.executionStreamCancel = null;
     }
 
     if (this.editReviewUnsubscribe) {
@@ -242,6 +246,21 @@ class RemoteChatService {
       taskId: session.taskId,
     });
 
+    session.streamingMessageId = undefined;
+
+    const statusText = this.getLocaleText().RemoteControl.accepted;
+    const statusMessage = await this.sendMessage(message, statusText);
+    logger.debug('[RemoteChatService] Sent acceptance message', {
+      channelId: message.channelId,
+      chatId: message.chatId,
+      messageId: statusMessage.messageId,
+    });
+    session.streamingMessageId = statusMessage.messageId;
+    session.lastMessageId = statusMessage.messageId;
+    session.sentChunks = [statusText];
+    session.lastStreamStatus = undefined;
+    session.lastStatusAck = 'accepted';
+
     const taskSettings: TaskSettings = { autoApprovePlan: true };
     await taskService.updateTaskSettings(session.taskId, taskSettings);
 
@@ -253,6 +272,10 @@ class RemoteChatService {
         channelId: message.channelId,
         chatId: message.chatId,
       });
+      if (session.streamingMessageId) {
+        await this.editMessage(session, this.getLocaleText().RemoteControl.noActiveTask);
+        session.sentChunks = [];
+      }
       return;
     }
 
@@ -287,16 +310,17 @@ class RemoteChatService {
       model,
     });
 
-    const statusText = this.getLocaleText().RemoteControl.processing;
-    const statusMessage = await this.sendMessage(message, statusText);
-    logger.debug('[RemoteChatService] Sent processing message', {
-      channelId: message.channelId,
-      chatId: message.chatId,
-      messageId: statusMessage.messageId,
-    });
-    session.streamingMessageId = statusMessage.messageId;
-    session.lastMessageId = statusMessage.messageId;
-    session.sentChunks = [statusText];
+    const processingText = this.getLocaleText().RemoteControl.processing;
+    if (session.streamingMessageId) {
+      await this.editMessage(session, processingText);
+      session.sentChunks = [processingText];
+    } else {
+      const statusMessage = await this.sendMessage(message, processingText);
+      session.streamingMessageId = statusMessage.messageId;
+      session.lastMessageId = statusMessage.messageId;
+      session.sentChunks = [processingText];
+    }
+    session.lastStatusAck = 'running';
     session.lastStreamStatus = undefined;
   }
 
@@ -417,6 +441,7 @@ class RemoteChatService {
     session.lastMessageId = undefined;
     session.sentChunks = [];
     session.lastStreamStatus = undefined;
+    session.lastStatusAck = undefined;
     session.lastSentAt = 0;
 
     const newTaskId = await taskService.createTask(firstMessage || 'Remote task');
@@ -428,7 +453,7 @@ class RemoteChatService {
       return;
     }
 
-    const onChange = debounce(() => {
+    const onChange = throttle(() => {
       for (const [sessionKey, session] of this.sessions) {
         const execution = useExecutionStore.getState().getExecution(session.taskId);
         if (!execution) {
@@ -443,6 +468,13 @@ class RemoteChatService {
           continue;
         }
 
+        if (session.lastStatusAck !== 'running' && session.streamingMessageId) {
+          const processingText = this.getLocaleText().RemoteControl.processing;
+          this.editMessage(session, processingText).catch(console.error);
+          session.lastStatusAck = 'running';
+          session.sentChunks = [processingText];
+        }
+
         const content = execution.streamingContent;
         if (!content) continue;
 
@@ -454,6 +486,7 @@ class RemoteChatService {
       }
     }, STREAM_THROTTLE_MS);
 
+    this.executionStreamCancel = onChange.cancel;
     this.executionUnsubscribe = useExecutionStore.subscribe(onChange);
   }
 
@@ -511,6 +544,17 @@ class RemoteChatService {
         chunk
       );
       session.sentChunks.push(chunk);
+    }
+
+    if (execution.status !== 'running' && session.lastStatusAck !== execution.status) {
+      const statusText = this.getTerminalStatusText(execution.status);
+      if (statusText) {
+        await this.sendMessage(
+          { channelId: session.channelId, chatId: session.chatId } as RemoteInboundMessage,
+          statusText
+        );
+        session.lastStatusAck = execution.status;
+      }
     }
   }
 
@@ -587,6 +631,19 @@ class RemoteChatService {
     );
     session.streamingMessageId = message.messageId;
     session.sentChunks = [streamingChunk];
+  }
+
+  private getTerminalStatusText(status: ExecutionStatus): string | null {
+    if (status === 'completed') {
+      return this.getLocaleText().RemoteControl.completed;
+    }
+    if (status === 'error') {
+      return this.getLocaleText().RemoteControl.failed;
+    }
+    if (status === 'stopped') {
+      return this.getLocaleText().RemoteControl.stopped;
+    }
+    return null;
   }
 
   private async sendMessage(
