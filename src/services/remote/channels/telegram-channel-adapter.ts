@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { logger } from '@/lib/logger';
 import type { RemoteChannelAdapter } from '@/services/remote/remote-channel-types';
+import { parseAllowedChatIds } from '@/services/remote/telegram-remote-utils';
 import { useSettingsStore } from '@/stores/settings-store';
 import type {
   RemoteAttachment,
@@ -144,10 +145,7 @@ export class TelegramChannelAdapter implements RemoteChannelAdapter {
     return {
       enabled: settings.telegram_remote_enabled,
       token: settings.telegram_remote_token,
-      allowedChatIds: settings.telegram_remote_allowed_chats
-        .split(',')
-        .map((id) => Number(id.trim()))
-        .filter((id) => !Number.isNaN(id)),
+      allowedChatIds: parseAllowedChatIds(settings.telegram_remote_allowed_chats),
       pollTimeoutSecs: Number(settings.telegram_remote_poll_timeout || '25'),
     };
   }

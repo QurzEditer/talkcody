@@ -12,6 +12,7 @@ import { messageService } from '@/services/message-service';
 import {
   isDuplicateTelegramMessage,
   normalizeTelegramCommand,
+  parseAllowedChatIds,
   splitTelegramText,
 } from '@/services/remote/telegram-remote-utils';
 import { taskService } from '@/services/task-service';
@@ -55,6 +56,7 @@ interface PendingApprovalState {
 class TelegramRemoteService {
   private inboundUnlisten: UnlistenFn | null = null;
   private executionUnsubscribe: (() => void) | null = null;
+  private editReviewUnsubscribe: (() => void) | null = null;
   private running = false;
   private sessions = new Map<number, ChatSessionState>();
   private approvals = new Map<string, PendingApprovalState>();
@@ -93,6 +95,16 @@ class TelegramRemoteService {
     if (this.inboundUnlisten) {
       this.inboundUnlisten();
       this.inboundUnlisten = null;
+    }
+
+    if (this.executionUnsubscribe) {
+      this.executionUnsubscribe();
+      this.executionUnsubscribe = null;
+    }
+
+    if (this.editReviewUnsubscribe) {
+      this.editReviewUnsubscribe();
+      this.editReviewUnsubscribe = null;
     }
 
     await invoke('telegram_stop');
@@ -416,7 +428,13 @@ class TelegramRemoteService {
   }
 
   private attachEditReviewListener(): void {
-    useEditReviewStore.subscribe((state) => {
+    if (this.editReviewUnsubscribe) {
+      return;
+    }
+    this.editReviewUnsubscribe = useEditReviewStore.subscribe((state) => {
+      if (!this.running) {
+        return;
+      }
       for (const [taskId, entry] of state.pendingEdits.entries()) {
         const session = Array.from(this.sessions.entries()).find(
           ([, value]) => value.taskId === taskId
@@ -502,7 +520,7 @@ class TelegramRemoteService {
     return {
       enabled: settings.telegram_remote_enabled,
       token: settings.telegram_remote_token,
-      allowedChatIds: this.parseAllowedChats(settings.telegram_remote_allowed_chats),
+      allowedChatIds: parseAllowedChatIds(settings.telegram_remote_allowed_chats),
       pollTimeoutSecs: Number(settings.telegram_remote_poll_timeout || '25'),
     };
   }
@@ -516,12 +534,8 @@ class TelegramRemoteService {
     }
   }
 
-  private parseAllowedChats(raw: string): number[] {
-    if (!raw) return [];
-    return raw
-      .split(',')
-      .map((id) => Number(id.trim()))
-      .filter((id) => !Number.isNaN(id) && id !== 0);
+  private parseAllowedChats(raw: string | null | undefined): number[] {
+    return parseAllowedChatIds(raw);
   }
 
   private toRustConfig(config: TelegramRemoteConfig) {

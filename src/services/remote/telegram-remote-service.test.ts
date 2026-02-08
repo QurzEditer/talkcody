@@ -256,6 +256,12 @@ describe('telegram-remote-service', () => {
     });
   });
 
+  it('filters zero values when parsing allowlist input', () => {
+    // @ts-expect-error - accessing private method for testing
+    const result = telegramRemoteService.parseAllowedChats('0, 0, 123');
+    expect(result).toEqual([123]);
+  });
+
   describe('flushFinalStream', () => {
     it('should send final message content even when streamingContent is cleared', async () => {
       const chatId = 12345;

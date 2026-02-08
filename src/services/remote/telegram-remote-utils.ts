@@ -2,6 +2,14 @@ const TELEGRAM_COMMAND_PREFIX_RE = /^\/(\w+)(?:@\w+)?/i;
 const DEFAULT_CHUNK_LIMIT = 4096;
 const DEFAULT_DEDUP_TTL_MS = 5 * 60 * 1000;
 
+export function parseAllowedChatIds(raw: string | null | undefined): number[] {
+  if (!raw || !raw.trim()) return [];
+  return raw
+    .split(',')
+    .map((id) => Number(id.trim()))
+    .filter((id) => Number.isFinite(id) && id !== 0);
+}
+
 type DedupEntry = {
   seenAt: number;
 };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isDuplicateTelegramMessage,
   normalizeTelegramCommand,
+  parseAllowedChatIds,
   splitTelegramText,
 } from '@/services/remote/telegram-remote-utils';
 
@@ -25,6 +26,23 @@ describe('telegram-remote-utils', () => {
     expect(isDuplicateTelegramMessage('telegram', 'chat-a', 'msg-1', 1000)).toBe(false);
     expect(isDuplicateTelegramMessage('feishu', 'chat-a', 'msg-1', 1000)).toBe(false);
     expect(isDuplicateTelegramMessage('telegram', 'chat-a', 'msg-1', 1000)).toBe(true);
+  });
+
+  it('parses allowed chat ids and filters invalid/zero values', () => {
+    expect(parseAllowedChatIds('')).toEqual([]);
+    expect(parseAllowedChatIds('   ')).toEqual([]);
+    expect(parseAllowedChatIds(',')).toEqual([]);
+    expect(parseAllowedChatIds('0, 0')).toEqual([]);
+    expect(parseAllowedChatIds('123, abc, 0, 456')).toEqual([123, 456]);
+  });
+
+  it('keeps large numeric chat ids intact', () => {
+    expect(parseAllowedChatIds('8136227891')).toEqual([8136227891]);
+  });
+
+  it('handles null and undefined safely', () => {
+    expect(parseAllowedChatIds(null)).toEqual([]);
+    expect(parseAllowedChatIds(undefined)).toEqual([]);
   });
 
   it('splits long text into chunks', () => {

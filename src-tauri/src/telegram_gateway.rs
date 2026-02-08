@@ -229,8 +229,9 @@ pub async fn load_config<R: Runtime>(app_handle: &AppHandle<R>) -> Result<Telegr
     let content = tokio::fs::read_to_string(&path)
         .await
         .map_err(|e| format!("Failed to read telegram config: {}", e))?;
-    let parsed = serde_json::from_str::<TelegramConfig>(&content)
+    let mut parsed = serde_json::from_str::<TelegramConfig>(&content)
         .map_err(|e| format!("Failed to parse telegram config: {}", e))?;
+    sanitize_allowed_chat_ids(&mut parsed.allowed_chat_ids);
     Ok(parsed)
 }
 
@@ -250,6 +251,10 @@ pub async fn save_config<R: Runtime>(
         .await
         .map_err(|e| format!("Failed to write telegram config: {}", e))?;
     Ok(())
+}
+
+fn sanitize_allowed_chat_ids(allowed_chat_ids: &mut Vec<i64>) {
+    allowed_chat_ids.retain(|id| *id != 0);
 }
 
 fn is_chat_allowed(config: &TelegramConfig, chat_id: i64) -> bool {
@@ -952,8 +957,9 @@ pub async fn telegram_get_config(
 pub async fn telegram_set_config(
     app_handle: AppHandle,
     state: State<'_, TelegramGatewayState>,
-    config: TelegramConfig,
+    mut config: TelegramConfig,
 ) -> Result<(), String> {
+    sanitize_allowed_chat_ids(&mut config.allowed_chat_ids);
     save_config(&app_handle, &config).await?;
     let mut gateway = state.lock().await;
     gateway.config = config.clone();
@@ -1195,7 +1201,10 @@ pub fn default_state() -> TelegramGatewayState {
 
 #[cfg(test)]
 mod tests {
-    use super::{load_state, save_state, TelegramGatewayStateSnapshot, TELEGRAM_STATE_VERSION};
+    use super::{
+        load_state, sanitize_allowed_chat_ids, save_state, TelegramGatewayStateSnapshot,
+        TELEGRAM_STATE_VERSION,
+    };
     use tauri::test::mock_app;
 
     /// This test uses Tauri test infrastructure that may not work on Windows CI
@@ -1217,5 +1226,12 @@ mod tests {
             .expect("load_state should succeed");
 
         assert_eq!(reloaded.last_update_id, Some(42));
+    }
+
+    #[test]
+    fn sanitize_allowed_chat_ids_drops_zero() {
+        let mut ids = vec![0, 123, 0, 456];
+        sanitize_allowed_chat_ids(&mut ids);
+        assert_eq!(ids, vec![123, 456]);
     }
 }
