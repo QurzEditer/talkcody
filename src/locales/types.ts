@@ -1298,6 +1298,7 @@ export interface LocaleDefinition {
       emptyAudio: string;
       noTranscriptionText: string;
       transcriptionFailed: (message: string) => string;
+      openaiOAuthNotSupported: string;
     };
   };
 

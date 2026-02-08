@@ -8,8 +8,8 @@
     "method": "POST",
     "url": "https://api.minimaxi.com/anthropic/v1/messages",
     "headers": {
-      "content-type": "application/json",
       "x-api-key": "REDACTED",
+      "content-type": "application/json",
       "anthropic-version": "2023-06-01"
     },
     "body": {
@@ -18,7 +18,7 @@
         {
           "content": [
             {
-              "text": "硅谷附近有哪些好玩的地方",
+              "text": "Who is Kang Kai Sen? Kang Kai Sen.",
               "type": "text"
             }
           ],
@@ -27,9 +27,9 @@
         {
           "content": [
             {
-              "id": "call_function_c8we1d47vyuz_1",
+              "id": "call_function_bppjyitxxcu6_1",
               "input": {
-                "query": "硅谷附近旅游景点 2025 圣荷西 旧金山湾区"
+                "query": "Kang Kai Sen"
               },
               "name": "webSearch",
               "type": "tool_use"
@@ -40,10 +40,28 @@
         {
           "content": [
             {
-              "content": "[\n  {\n    \"title\": \"在加利福尼亚州圣何塞旅行时不容错过的7 个优质景点 - 畅游美国\",\n    \"url\": \"http://www.gousa.cn/experience/7-exciting-stops-make-during-your-stay-san-jose-california\",\n    \"content\": \"在群山环抱的美国科技圣地，您可以找到Googleplex、创新科技博物馆和天文台这些主要游览景点。荣登圣何塞旅游推荐榜的七个景点囊括了壮美的红木森林、令人欢笑不断的动物园 ...\"\n  },\n  {\n    \"title\": \"圣何塞10 大景点玩乐\",\n    \"url\": \"https://cn.tripadvisor.com/Attractions-g33020-Activities-San_Jose_California.html\",\n    \"content\": \"从圣何塞出发- 迷人的优胜美地国家公园全日游 · 库比蒂诺出发的迷人纳帕和索诺玛葡萄酒之旅 · 从圣何塞出发的太浩湖小团体旅游 · 圣何塞出发的优胜美地国家公园和巨型红杉之旅.\"\n  },\n  {\n    \"title\": \"聖何塞自由行旅遊攻略（2026）：附近熱門好去處、人氣景點\",\n    \"url\": \"https://hk.trip.com/travel-guide/destination/san-jose-34515/\",\n    \"content\": \"探索聖荷西的埃及秘密 走進法老與棕櫚樹環繞的花園世界，來到聖荷西的玫瑰十字埃及博物館和玫瑰十字公園，這裡是歷史愛好者和好奇旅人的天堂！欣賞真正的埃及文物、正宗的神 ...\"\n  },\n  {\n    \"title\": \"旧金山旅游攻略2026\",\n    \"url\": \"https://www.meilvtong.com/viewthread.php?tid=5\",\n    \"content\": \"旧金山的景点 · 1. 金门大桥Golden Gate Bridge · 2. 恶魔岛Alcatraz Island · 3. 渔人码头Fisherman's Wharf · 4. 九曲花街Lombard Street · 5. 旧金山艺术宫 ...\"\n  },\n  {\n    \"title\": \"2026聖荷西旅遊攻略\",\n    \"url\": \"https://www.expedia.com.hk/San-Jose.dx602703\",\n    \"content\": \"旧金山至锡安,布莱斯,大峡谷4日游 · 圣何塞:优胜美地和巨型红杉一日游 · 硅谷科技之旅 · 圣何塞幽灵之旅:镰刀、牺牲和剪影 · 初学者户外攀岩-湾区 · 红杉树& 火山口湖国家公园& ...\"\n  },\n  {\n    \"title\": \"我們最推薦的加州聖荷西活動\",\n    \"url\": \"https://www.getyourguide.com/zh-tw/sheng-he-xi-l1177/\",\n    \"content\": \"您會在半圓頂(Half Dome)、艾爾卡皮坦(El Capitan)、優勝美地瀑布(Yosemite Falls) 和新娘瀑布(Bridalveil Falls) 停留片刻，並分配充足的時間「自拍」。\"\n  },\n  {\n    \"title\": \"聖塔克拉拉最值得做的60 件事\",\n    \"url\": \"https://www.discoversantaclara.org/zh-hk/blog/top-things-to-do/\",\n    \"content\": \"Topgolf 位於聖荷西，距離Santa Clara 只有幾分鐘的路程，提供獨特的運動與娛樂結合。無論您是經驗豐富的高爾夫球手或是完全的初學者，都可以享受將植入微型晶片的高爾夫球擊 ...\"\n  },\n  {\n    \"title\": \"[2026] 美西自由行15 天行程表(開車& 不開車都有) & 超過90 ...\",\n    \"url\": \"https://timtingtravel.com/usa-westcoast/\",\n    \"content\": \"15 天美西自由行不開車行程表分享 · Hollywood Walk of Fame (星光大道) · Beverly Hills (比佛利山莊) · Getty Center (蓋蒂藝術博物館) · Santa Monica Beach (聖莫尼卡碼頭 ...\"\n  },\n  {\n    \"title\": \"舊金山必去20大景點！沒去過別說你來過舊金山！\",\n    \"url\": \"https://www.klook.com/zh-TW/blog/tip-top-20-spots-san-fransisco-america/\",\n    \"content\": \"舊金山景點｜金門大橋Golden Gate Bridge · 舊金山景點｜藝術宮Palace of Fine Arts · 舊金山景點｜阿拉莫廣場Alamo Square · 舊金山景點｜卡斯楚街Castro Street ...\"\n  },\n  {\n    \"title\": \"2025 旧金山旅游攻略，交通、住宿、市区及周边景点全覆盖\",\n    \"url\": \"https://www.17ybm.com/san-francisco/\",\n    \"content\": \"旧金山周边景点 · 硅谷Silicon Valley · 缪尔森林国家纪念地Muir Woods National Monument · 太浩湖Lake Tahoe · 纳帕谷Napa Valley · 六旗探索王国Six Flags ...\"\n  }\n]",
+              "content": "[{\"title\":\"Kaisen Kang | OLAP Database & Performance Expert\",\"url\":\"https://kangkaisen.com/\",\"content\":\"I'm Kaisen Kang. I'm a Database Engineer currently residing in Singapore. I focus on OLAP database query engine. CelerData Query Team Leader; StarRocks PMC ...\"},{\"title\":\"แกงไก่วุ้นเส้น Kang Gai Woon Sen A lesser known authentic spicy ...\",\"url\":\"https://www.facebook.com/groups/authenticthaicooking/posts/3000287206960570/\",\"content\":\"How to cook Kang Kai sai woonsen 1.pound all ingredients together, dried chili shallots galangal and lemonglass 2. Take chili curry to fry with ...\"},{\"title\":\"Chiang Kai-shek - Wikipedia\",\"url\":\"https://en.wikipedia.org/wiki/Chiang_Kai-shek\",\"content\":\"Chiang Kai-shek was a Chinese politician, revolutionary, and military commander who led the Republic of China (ROC) from 1928 until his death in 1975.\"},{\"title\":\"How to make kang kai my style (LAO FOOD) Home Made By Kaysone\",\"url\":\"https://www.youtube.com/watch?v=hPAf-yZeD2E\",\"content\":\"\\\"LIKE\\\" my Fan Page On facebook - https://www.facebook.com/pg/HomeMadeByKaysone.\"},{\"title\":\"Kang Kai - YouTube\",\"url\":\"https://www.youtube.com/@KangKaiCHN\",\"content\":\"Kang Kai · 2011 Chinese Gymnastics National Championships · 2009 Gymnastics World Championships - Men's All-Around Final · 2009 Gymnastics World Championships - ...\"},{\"title\":\"‪KAI KANG‬ - ‪Google Scholar‬\",\"url\":\"https://scholar.google.com/citations?user=hs9xDe8AAAAJ&hl=en\",\"content\":\"KAI KANG. Sun Yat-sen University. Verified email at mail.sysu.edu.cn - Homepage · Latent variable modelingBayesian analysisLongitudinal data ...\"},{\"title\":\"2 \\\"Kaisen Kang\\\" profiles - LinkedIn\",\"url\":\"https://www.linkedin.com/pub/dir/Kaisen/Kang\",\"content\":\"View the profiles of professionals named \\\"Kaisen Kang\\\" on LinkedIn. There are 2 professionals named \\\"Kaisen Kang\\\", who use LinkedIn to exchange information, ...\"},{\"title\":\"Work Experience | Kaisen Kang\",\"url\":\"https://kangkaisen.com/about.html\",\"content\":\"Hello, I'm Kaisen Kang, I'm a Database Engineer currently residing in Singapore.I focus on OLAP database query engine.\"},{\"title\":\"Kang Kai (康凯) - MyDramaList\",\"url\":\"https://mydramalist.com/people/3122-kang-kai\",\"content\":\"Name: Kang Kai · Native name: 康凯 · Nationality: Chinese · Gender: Male · Born: March 1, 1972 · Age: 53.\"},{\"title\":\"Kai Kang - IMDb\",\"url\":\"https://www.imdb.com/name/nm1169107/\",\"content\":\"Kai Kang was born on 5 April 1947 in Taipei, Taiwan. He is an actor, known for Fierce Among Strong (1975), Da quan mo gui (1973) and Bi hu you long (1972).\"}]",
               "name": "webSearch",
-              "tool_use_id": "call_function_c8we1d47vyuz_1",
+              "tool_use_id": "call_function_bppjyitxxcu6_1",
               "type": "tool_result"
+            }
+          ],
+          "role": "user"
+        },
+        {
+          "content": [
+            {
+              "text": "I couldn't find specific information about a person named **\"Kang Kai Sen\"** in my search results.\n\nHowever, I found a few people with similar names who may be relevant:\n\n1. **Kaisen Kang** - A Database Engineer residing in Singapore, working as a Query Team Leader at CelerData and StarRocks PMC. He focuses on OLAP database query engines. His personal website: kangkaisen.com\n\n2. **Kang Kai (康凯)** - A Chinese male actor born on March 1, 1972.\n\n3. **Kai Kang** - An actor born on April 5, 1947, in Taipei, Taiwan.\n\nCould you provide more context or clarify:\n- Is this a personal connection (friend, colleague, family member)?\n- Is there a different spelling of the name?\n- Are you referring to one of the people listed above?\n\nIf this is someone in your personal or professional network, I wouldn't have information about them since I only have access to publicly available online information.",
+              "type": "text"
+            }
+          ],
+          "role": "assistant"
+        },
+        {
+          "content": [
+            {
+              "text": "The first one is the result of the analysis.",
+              "type": "text"
             }
           ],
           "role": "user"
@@ -51,13 +69,286 @@
       ],
       "model": "MiniMax-M2.1",
       "stream": true,
-      "system": "\nYou are a smart AI assistant to give user accurate answers.\n\n## ⚠️ CRITICAL: READ-ONLY OPERATIONS ONLY\n\n**IMPORTANT**: You are a read-only agent. All your tools must ONLY be used for reading and gathering information. You MUST NOT:\n- Create, modify, or delete any files\n- Execute commands that change system state\n- Perform any write operations\n- Make any modifications to the system\n\nYour tools are designed for information gathering only. Use them exclusively for reading, searching, and analyzing existing content.\n\nYour answer must follow the following rules:\n\n1. Write an accurate, detailed, and comprehensive response to the user's QUESTION.\n2. Your answer must be as detailed and organized as possible, Prioritize the use of lists, tables, and quotes to organize output structures.\n3. Your answer must be precise, of high-quality, and written by an expert using an unbiased and journalistic tone.\n4. You MUST ADHERE to the following formatting instructions:\n    - Use markdown to format paragraphs, lists, tables, and quotes whenever possible.\n    - Use headings level 4 to separate sections of your response, like \"#### Header\", but NEVER start an answer with a heading or title of any kind.\n    - Use single new lines for lists and double new lines for paragraphs.\n5. You only need to use web search tools when the user asks for the content of a web page.\n\nToday's date is 2026-02-07T07:30:13.807Z.\n",
+      "system": "\nYou are TalkCody, an expert Coding Planner and Lead Engineer. Your mandate is to orchestrate complex software tasks, manage sub-agents, and execute code changes with precision. You operate within a defined workspace and must strictly adhere to project constraints defined in AGENTS.md.\n\n# CORE IDENTITY & INTERACTION\n- **Orchestrator**: You clarify ambiguity immediately, then drive the task to completion.\n- **Directness**: Respond in the user's language. Omit conversational filler. Your output must be dense with utility (code, plans, or direct answers).\n- **Context Aware**: Your \"Source of Truth\" is the file system and AGENTS.md. Do not hallucinate APIs or dependencies.\n\n# TOOL USAGE STRATEGY\n\n## Concurrency & Batch Tool Calls\n\n**return as many tool calls as possible in a single response**.\n\n### Read Operations - ALWAYS Batch Together\n### Write/Edit Operations - Batch Different Files\n\n## Decision Matrix\n\n### 1. Direct Execution\nUse standard tools (`readFile`, `editFile`, `codeSearch`) for straightforward tasks.\n- **Scope**: Single-file edits, simple bug fixes, or quick info gathering.\n- **Logic**: When the task is clearly bounded and you have all necessary context.\n\n### 2. Strategic Delegation (`callAgent`)\nActively consider delegation for enhanced efficiency and quality. When using `callAgent`, **always** consider whether multiple sub-agents can work in parallel to maximize efficiency.\n- **Complex Analysis**: Multi-domain analysis (architecture, testing, security, performance) benefits from specialized focus.\n- **Parallel Processing**: Independent modules or components can be handled simultaneously for faster completion.\n- **Expertise Areas**: Tasks requiring deep domain knowledge (AI integration, database design, security audits) benefit from focused sub-agents.\n- **Large Scope**: When comprehensive analysis across multiple files/systems is needed.\n\n## Delegation Protocol\n- **Gather First**: Use `codeSearch`, `readFile`, `glob` tool or explore agent to gather context *before* calling an agent to ensure you pass valid context.\n- **Explicit Payload**:\n  - `context`: Dump relevant file contents/search results here. Do not assume the agent knows previous chat history.\n  - `targets`: List specific files to avoid overwrite conflicts.\n- **Write Tasks**: When delegating multi-file or multi-module modifications, break them into clearly separated, independent tasks to enable parallel execution without file conflicts.\n- **Task Decomposition**: Each sub-agent should handle a complete, self-contained modification unit (e.g., one component, one service, one feature module) with exact file boundaries.\n- **Dependency Management**: If tasks have dependencies, clearly define execution sequence or use separate delegation rounds.\n\n## callAgent Parallelism Strategy\n\n**ALWAYS maximize parallelism** - spawn multiple subagents in a single response when tasks are independent.\n\n### Strategy 1: Same Agent Type, Different Modules\nUse multiple instances of the same agent to gather context from different areas:\n```\n[Tool Calls]\n- callAgent: explore → gather context from /src/auth\n- callAgent: explore → gather context from /src/api\n- callAgent: explore → gather context from /src/db\n```\n\n### Strategy 2: Different Agent Types, Different Concerns\nUse specialized agents in parallel for different aspects of the same feature:\n```\n[Tool Calls]\n- callAgent: document-writer → write API documentation for the new feature\n- callAgent: coding → implement the core business logic\n- callAgent: code-review → write unit tests for the feature\n```\n\n### Parallelism Decision Matrix\n| Scenario | Strategy |\n|----------|----------|\n| Context gathering from multiple modules | Multiple parallel explore agents |\n| Feature implementation (code + docs + tests) | Parallel coding + document-writer + code-review |\n| Multi-file refactor | Multiple parallel coding agents with distinct targets |\n| Dependent tasks (A's output feeds B) | Sequential callAgent rounds |\n\n## Edit-File Tool\n\n**When to use edit-file tool vs write-file tool:**\n   - **edit-file**: File exists, making modifications (1-10 related changes per file)\n     - Single edit: One isolated change\n     - Multiple edits: Related changes to same file (imports + types, code)\n   - **write-file**: Creating a brand new file from scratch\n   - **write-file**: overwrite existing file when too many changes are needed\n\n# ENGINEERING GUIDELINES\n**Philosophy**: Keep It Simple, Stupid (KISS). Prioritize maintainability and readability over clever one-liners.\n\n1. **Building from Scratch**:\n   - Confirm requirements first.\n   - Sketch the architecture/module interaction mentally or in the plan.\n   - Implement modular, strictly typed (where applicable), and self-documenting code.\n\n2. **Modifying Existing Code**:\n   - **Understand First**: Read related files to grasp the current patterns and style.\n   - **Minimal Intrusion**: Make the smallest change necessary to achieve the goal. Avoid sweeping formatting changes unless requested.\n   - **Bug Fixes**: Locate the root cause via logs or reproduction steps. Ensure your fix addresses the root cause, not just the symptom. Verify with tests.\n\n3. **Refactoring**:\n   - Only change internal structure, never external behavior (unless it's an API breaking change request).\n   - Update all consumers of the refactored code.\n\n# WORKFLOW Mode: ACT vs. PLAN\n\n## ACT VS PLAN\n\n- For trivial and simple tasks, ACT directly using tools.\n- For complex tasks, PLAN first then ACT.\n- If the task involves multiple files, architectural changes, or high ambiguity, you MUST enter **PLAN MODE**.\n\n**CRITICAL RULE**: Check the environment context provided in the <env> XML section. If you see:\n```xml\n<env>\n  <plan_mode>TRUE</plan_mode>\n</env>\n```\n\nThis means PLAN MODE is ENABLED. When PLAN MODE is ENABLED (`<plan_mode>TRUE</plan_mode>`):\n- You MUST follow the PLAN MODE instructions provided below\n- You MUST delegate planning to the Plan Agent before executing complex tasks\n- DO NOT skip the planning phase\n\nWhen PLAN MODE is DISABLED (`<plan_mode>FALSE</plan_mode>`):\n- You can execute tasks directly without delegating to the Plan Agent\n- Use your judgment to decide between ACT and PLAN based on task complexity\n\n# PLAN MODE Workflow\n\n## Overview\n\nWhen PLAN MODE is ENABLED (indicated by `<plan_mode>TRUE</plan_mode>` in the <env> section), you should delegate planning to the specialized **Plan Agent**. The Plan Agent will:\n1. Explore the project context\n2. Generate a structured plan\n3. Return the approved plan content\n\n## Delegation to Plan Agent\n\n### How to Delegate\n\nUse `callAgent` with the \"plan\" agent:\n\n```\ncallAgent({\n  agentId: \"plan\",\n  task: \"Create a comprehensive implementation plan for: {USER_REQUIREMENT}\",\n  context: `\nProject Root: {workspaceRoot}\nTask ID: {taskId}\nCurrent Requirement: {USER_REQUIREMENT}\n\nRelevant Context:\n- Project structure and existing patterns\n- Related files that may be affected\n- Any specific constraints or requirements mentioned\n  `,\n  targets: []\n})\n```\n\nNote: you should pass enough context to the Plan Agent to enable it to generate a comprehensive plan.\n\n### Receiving Plan Agent Results\n\nThe Plan Agent returns plan by markdown format\n\n- Use the approved plan to create a todo list using **TodoWrite**\n- Execute each todo item\n- Update todo status as you complete them\n\n## Executing Approved Plans\n\nAfter receiving approved plan:\n\n1. **Create todos** using **TodoWrite** based on the approved plan\n2. **Execute todos systematically**:\n   - Process dependent tasks first\n   - Use parallel execution for independent tasks\n   - Update todo status after each completion\n3. **Report progress** to user\n4. **Handle errors** gracefully with clear messages\n\n# SAFETY & BOUNDARIES\n- **Workspace Confinement**: strict operations within the allowed root directories.\n- **Non-Destructive**: Never delete non-trivial code without explicit confirmation in the Plan.\n- **Secrets Management**: Never print or hardcode credentials/secrets.\n\n# OBJECTIVE\nYour goal is not to chat, but to ship. Measure success by:\n1. Accuracy of the solution.\n2. Stability of the code.\n3. Adherence to existing project styles.\n\n# Proactively\n\nActively verify completion by running the relevant checks yourself.\n\n- If you fix a test failure, run the tests and confirm they pass.\n- If you fix a compilation/build error, run the build/compile and confirm success.\n- Do not just provide commands for the user to run instead.\n\n\n# Rules\n\n- The user may provide a file's contents directly in their message, in which case you shouldn't use the read_file tool to get the file contents again since you already have it.\n- Be precise with replacements to avoid errors\n- Follow existing project patterns and conventions\n- Answer the user's question directly with a concise answer; do not generate new Markdown files to answer the user's question.\n\n\n---\n\nIMPORTANT: Here is important information about the environment you are running in:\n<env>\n<working_directory>/Users/kks/mygit/talkcody</working_directory>\n<is_git_repo>Yes</is_git_repo>\n<platform>mac_arm</platform>\n<today_date>2026-02-07</today_date>\n<plan_mode>FALSE</plan_mode>\n</env>\n\n---\n\n## Markdown Context\n\n<project>\n# Project Development Guide for AI Agents\n\n## Project Overview\n\n- Project Name: TalkCody\n- Description: Desktop AI Coding App for macOS, Windows, and Linux\n\n## Technology Stack\n\n### Frontend\n\n- Framework: React 19\n- Language: TypeScript\n- Styling: Tailwind CSS + Shadcn UI\n- Testing: Vitest\n- State Management: Zustand\n\n### Backend\n\n- Framework: Tauri 2\n- Language: Rust\n\n### Database\n\n- Type: SQLite\n\n## Project Structure\n\n```\ntalkcody/\n│\n├── src/                    # Main source code directory\n│   ├── components/         # React UI components\n│   ├── hooks/              # Custom React hooks\n│   ├── lib/                # Utility functions and shared logic\n│   ├── pages/              # Page components\n│   ├── styles/             # Global styles and CSS\n│   └── types/              # TypeScript type definitions\n|   ├── services/           # AI, database and other services\n|   ├── utils/\n│\n├── src-tauri/              # Rust backend code\n│   ├── src/                # Rust source files\n│   ├── Cargo.toml\n│   └── tauri.conf.json\n|   package.json\n|   tsconfig.json\n|   vite.config.ts\n```\n\n### Backend API Service\n\napps/api/ - API Service\n\nTest Command:\n```\ncd apps/api\nbun run test\n```\n\n### locales Directory\n\n- src/locales/en.ts - English locale file\n- src/locales/zh.ts - Chinese locale file\n- src/locales/types.ts - Locale type definitions\n- src/hooks/use-locale.ts - Custom hook for locale management\n\n### Important Notes\n\n- The docs directory is the user documentation website and does not need to be modified during development.\n\n## Development Guidelines\n\n1. Frontend Development Rules:\n   - Solve functions on the frontend using TypeScript when possible\n   - Using Functional Components with Hooks (Classless Components)\n   - Use Shadcn UI components (no need to provide source code)\n   - Use English for comments and text\n\n2. Naming Conventions:\n   - File names: kebab-case (e.g., `user-profile.ts`)\n   - Use Sonner component for toast notifications\n\n3. Bug fixing:\n   - must write a test case to cover the bug\n   - Fix the bug and ensure all tests pass\n\n4. Validation and Linting:\n   - Use `bun run lint` to check code quality before committing changes.\n   - Use `bun run tsc` to ensure type safety.\n   - Use `bun run test` to run all tests and ensure functionality.\n\n### bun run lint Fixes\n\n- Cannot modify the rules in biome.json; only fix code to pass lint checks.\n- When fixing code, try to keep the original logic unchanged and avoid introducing new issues.\n- Perform fixes in parallel as much as possible to reduce fixing time.\n- Do not use biome's unsafe fixes; you should manually fix the code.\n\n## Useful Bash Commands\n\n### Project Setup\n\n```bash\n# Run Tauri app\nbun run tauri dev\n\n# Build Tauri app\nbun run tauri build\n```\n\n### Development Workflow\n\n```bash\n\nbun run tsc\n\n# Lint code\nbun run lint\n\n# Run tests\nbun run test\n\n# Run single test file\nbun run test:file src/path/to/your/test-file.test.tsx\n\n# build\nbun run build\n```\n\nNote: You couldn't use `bun test` command. must use `bun run test` instead.\n\n### Log Directory\n\nTalkCody runtime log path:\n\n```\n~/Library/Logs/com.talkcody/talkcody.log\n```\n\nThe log in macOS dev env:\n\n```\n~/Library/Logs/com.com.talkcody.dev/TalkCody\\ Dev.log\n```\n\n### App data directory\n\nTalkCody app data path:\n\n```\n~/Library/Application Support/com.talkcody\n```\n\n## AI Code Generation Tips\n\n### Files import in TS code\n\nyou should use '@tauri-apps/api/path'. like this:\n\n```typescript\nimport { join, normalize, isAbsolute, appDataDir, dirname} from '@tauri-apps/api/path';\n```\n\n\nWhen generating code, consider:\n\n- Follow React functional component patterns\n- Use Tailwind CSS for styling\n- Implement responsive design\n- UI must support dark mode\n- Use accurate type definitions and do not use `any` types\n- Keep components modular and reusable\n- Use zustand for state management\n- Try to avoid using dynamic imports\n- User-visible messages and text need to support both English and Chinese.\n- Platform-related functions must be able to work simultaneously on macOS, Windows, and Linux platforms.\n- when need fetch, use `simpleFetch` from `@/lib/tauri-fetch`, not `fetch`.\n- When adding test cases, you should minimize mocking as much as possible.\n</project>\n\n---\n\nOUTPUT FORMAT INSTRUCTIONS:\nOutput the response in standard Markdown with headings, lists, and code blocks.\n\n---\n\n====\n# Available Subagents\n\nThe following agents are available for delegation via the `callAgent` tool.\nPick the best-fit subagent for each task (do not assume only one exists):\n\n- **plan**: Professional software planning expert that generates structured plans and obtains user approval\n- **code-review**: Multi-source code review specialist for GitHub PRs, local commits, git diffs, and project files\n- **explore**: Efficient single-task information gathering\n- **document-writer**: Creates comprehensive documentation matching repository standards\n- **test-writer**: Specialist in writing comprehensive tests matching repository standards\n- **coding**: Expert programming assistant for code reviews, debugging, and development\n- **china-options-buyer**: professional China commodity options trading strategist focused on long (buyer) strategies.\n- **api-designer**: API architecture expert designing scalable, developer-friendly interfaces. Creates REST and GraphQL APIs with comprehensive documentation, focusing on consistency, performance, and developer experience.\n- **code-reviewer**: Expert code reviewer specializing in code quality, security vulnerabilities, and best practices across multiple languages. Masters static analysis, design patterns, and performance optimization with focus on maintainability and technical debt reduction.\n\n## Delegation Guidelines\n\n- **Choose wisely**: Select the agent best suited for the specific task\n- **Provide context**: Subagents start with empty context; pass all necessary information\n- **Set targets**: Specify files/modules to avoid conflicts in parallel execution\n- **Batch independent tasks**: Run multiple subagents in parallel when tasks are independent\n====\n\nIMPORTANT: You MUST respond in English.",
       "temperature": 1.0,
       "thinking": {
         "budgetTokens": 12000,
         "type": "enabled"
       },
       "tools": [
+        {
+          "description": "Execute shell commands safely on the system.\n\nThis tool allows you to run shell commands with built-in safety restrictions. Choose commands based on the Platform info in the environment context:\n\n**Platform-specific command reference:**\n\n| Task | macOS/Linux | Windows |\n|------|-------------|---------|\n| List files | ls -la | dir |\n| Find files | find, fd | dir /s, where |\n| Search content | grep, rg | findstr |\n| Show file | cat, head, tail | type |\n| Current directory | pwd | cd |\n| Environment vars | env, export | set |\n| Process list | ps aux | tasklist |\n| Kill process | kill | taskkill |\n| Network info | ifconfig, ip | ipconfig |\n| Download file | curl, wget | curl, Invoke-WebRequest |\n| Archive | tar, zip | tar, Compress-Archive |\n| Package manager | brew (mac), apt (linux) | winget, choco |\n\n**Cross-platform commands:**\n- Git operations (git)\n- Node.js (node, npm, yarn, pnpm, bun)\n- Build tools (make, cargo, go)\n- Python (python, pip)\n\nThe command will be executed in the current working directory.\n\n**Background execution:**\nUse `run_in_background: true` to run long-running commands in the background. The command will continue running even if it produces no output for an extended period. Use this for:\n- Development servers\n- Long-running build processes\n- Continuous processes\n\nOutput can be read using `cat` or `tail -f` on the output file path returned in the result.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "runInBackground": {
+                "default": false,
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "command"
+            ],
+            "type": "object"
+          },
+          "name": "bash"
+        },
+        {
+          "description": "Call a registered sub-agent for a focused task. Subagents start with empty context.\n\n**Parameters**\n- `agentId`: The agent to call (see Available Subagents in system prompt)\n- `task`: Clear outcome description (2-5 sentences)\n- `context`: All necessary artifacts (file contents, schemas, requirements)\n- `targets`: Files/modules this agent will touch (for conflict avoidance)\n\n**Key Rules**\n- Subagents have zero history - pass all needed context\n- Use targets to enable safe parallel execution\n- For parallel calls, issue multiple callAgent in same response",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "agentId": {
+                "type": "string"
+              },
+              "context": {
+                "type": "string"
+              },
+              "targets": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "task": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "agentId",
+              "task",
+              "context"
+            ],
+            "type": "object"
+          },
+          "name": "callAgent"
+        },
+        {
+          "description": "Use this tool to read the contents of an existing file.\n\nThis tool will return the complete file content as a string by default.\nYou can optionally specify a starting line and number of lines to read a specific portion of the file.\n\nThe file path should be an absolute path.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "file_path": {
+                "type": "string"
+              },
+              "line_count": {
+                "type": "number"
+              },
+              "start_line": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "file_path"
+            ],
+            "type": "object"
+          },
+          "name": "readFile"
+        },
+        {
+          "description": "Use this tool when you need to find files containing specific patterns.\n\nUse this to find code patterns, function definitions, variable usage, or any text in the codebase.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "file_types": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "type": "string"
+              },
+              "pattern": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pattern",
+              "path"
+            ],
+            "type": "object"
+          },
+          "name": "codeSearch"
+        },
+        {
+          "description": "- Fast file pattern matching tool that works with any codebase size\n- Supports glob patterns like \"**/*.js\" or \"src/**/*.ts\"\n- Returns matching file paths sorted by modification time\n- Use this tool when you need to find files by name patterns",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "pattern": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "pattern"
+            ],
+            "type": "object"
+          },
+          "name": "glob"
+        },
+        {
+          "description": "Perform Language Server Protocol (LSP) operations like go-to-definition, references, hover, and symbols.\n\nProvide a file path and a 1-based line/character position as shown in editors.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "character": {
+                "type": "number"
+              },
+              "filePath": {
+                "type": "string"
+              },
+              "line": {
+                "type": "number"
+              },
+              "operation": {
+                "enum": [
+                  "goToDefinition",
+                  "findReferences",
+                  "hover",
+                  "documentSymbol",
+                  "workspaceSymbol",
+                  "goToImplementation",
+                  "prepareCallHierarchy",
+                  "incomingCalls",
+                  "outgoingCalls"
+                ],
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "operation",
+              "filePath"
+            ],
+            "type": "object"
+          },
+          "name": "lsp"
+        },
+        {
+          "description": "Use this tool to list files and directories in a specified directory.\n\nThis tool will return a concise string format showing directories and files grouped by their parent directory. It's useful for exploring directory structure, finding files, or understanding project organization.\n\nThe directory path must be absolute.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "directory_path": {
+                "type": "string"
+              },
+              "max_depth": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "directory_path"
+            ],
+            "type": "object"
+          },
+          "name": "listFiles"
+        },
+        {
+          "description": "Creates and manages todo items for task tracking and progress management in the current session.\nUse this tool to create and manage todo items for tracking tasks and progress. This tool provides comprehensive todo management:\n\n## When to Use This Tool\n\nUse this tool proactively in these scenarios:\n\n1. **Complex multi-step tasks** - When a task requires 3 or more distinct steps or actions\n2. **Non-trivial and complex tasks** - Tasks that require careful planning or multiple operations\n3. **User explicitly requests todo list** - When the user directly asks you to use the todo list\n4. **User provides multiple tasks** - When users provide a list of things to be done (numbered or comma-separated)\n5. **After receiving new instructions** - Immediately capture user requirements as todos\n6. **When you start working on a task** - Mark it as in_progress BEFORE beginning work. Ideally you should only have one todo as in_progress at a time\n7. **After completing a task** - Mark it as completed and add any new follow-up tasks discovered during implementation\n\n## Task States and Management\n\n1. **Task States**: Use these states to track progress:\n   - pending: Task not yet started\n   - in_progress: Currently working on (limit to ONE task at a time)\n   - completed: Task finished successfully\n\n2. **Task Management**:\n   - Update task status in real-time as you work\n   - Mark tasks complete IMMEDIATELY after finishing (don't batch completions)\n   - Only have ONE task in_progress at any time\n   - Complete current tasks before starting new ones\n   - Remove tasks that are no longer relevant from the list entirely\n\n3. **Task Completion Requirements**:\n   - ONLY mark a task as completed when you have FULLY accomplished it\n   - If you encounter errors, blockers, or cannot finish, keep the task as in_progress\n   - When blocked, create a new task describing what needs to be resolved\n   - Never mark a task as completed if:\n     - Tests are failing\n     - Implementation is partial\n     - You encountered unresolved errors\n     - You couldn't find necessary files or dependencies\n\n4. **Task Breakdown**:\n   - Create specific, actionable items\n   - Break complex tasks into smaller, manageable steps\n   - Use clear, descriptive task names\n\n## Tool Capabilities\n\n- **Create new todos**: Add tasks with content, priority, and status\n- **Update existing todos**: Modify any aspect of a todo (status, priority, content)\n- **Delete todos**: Remove completed or irrelevant tasks\n- **Batch operations**: Update multiple todos in a single operation\n- **Clear all todos**: Reset the entire todo list\n\nWhen in doubt, use this tool. Being proactive with task management demonstrates attentiveness and ensures you complete all requirements successfully.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "todos": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "content": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "enum": [
+                        "pending",
+                        "in_progress",
+                        "completed"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "content",
+                    "status",
+                    "id"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "todos"
+            ],
+            "type": "object"
+          },
+          "name": "todoWrite"
+        },
+        {
+          "description": "Use this tool to write content to a file.\n\nThis tool will create or overwrite a file with the provided content. It will automatically create directories if they don't exist. It's useful for creating new files or updating existing files in the project.\n\nThe file path should be an absolute path.",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "content": {
+                "type": "string"
+              },
+              "file_path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "file_path",
+              "content"
+            ],
+            "type": "object"
+          },
+          "name": "writeFile"
+        },
+        {
+          "description": "Edit an existing file with one or more text replacements.\n\nCRITICAL RULES:\n1. All old_string values must match EXACTLY - including spaces, tabs, and newlines\n2. Use readFile tool FIRST to see the exact content\n3. Include 3-5 lines of context before and after each change\n4. For file creation, use write-file tool instead\n\nHOW TO CHOOSE THE NUMBER OF EDITS:\n\nSingle Edit (edits.length = 1):\n✅ One isolated change\n✅ Simple fix or update in one location\n✅ Experimental/uncertain replacement\n✅ When you need to verify the result before continuing\n\nExample: \"Add an import statement\" → 1 edit\n\nMultiple Edits (edits.length = 2-10):\n✅ Related changes to the same file\n✅ Batch updates with similar patterns (e.g., rename all occurrences)\n✅ Refactoring that touches multiple parts (imports + function + types)\n✅ You're confident all replacements will work\n\nExample: \"Add import + update function + update type\" → 3 edits\n\nIMPORTANT: Maximum 10 edits per call. For larger refactorings, make multiple calls.\n\nBest practice workflow:\n1. Use readFile to see current content\n2. Identify all changes you want to make to this file\n3. For each change, copy EXACT text with context\n4. Create edit block(s) with old_string and new_string\n5. Call edit-file with your edit(s)",
+          "input_schema": {
+            "additionalProperties": false,
+            "properties": {
+              "edits": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "new_string": {
+                      "type": "string"
+                    },
+                    "old_string": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "old_string",
+                    "new_string"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "file_path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "file_path",
+              "edits"
+            ],
+            "type": "object"
+          },
+          "name": "editFile"
+        },
         {
           "description": "Search the web for comprehensive and up-to-date information.\n\nQuery Optimization Guidelines:\n- Extract the core topic/entity from questions (e.g., \"who is Elon Musk\" → \"Elon Musk\", \"what is React\" → \"React\")\n- For comparisons (e.g., \"X vs Y\"), search for both terms together to get comparison results\n- Remove question words (who, what, when, where, why, how) but keep context words that add meaning\n- Keep technical terms, version numbers, and specific qualifiers (e.g., \"React 19 features\" stays as-is)\n- For \"latest\" or \"recent\" queries, include temporal keywords (e.g., \"latest AI models 2025\")\n- Preserve programming language/framework context (e.g., \"error handling in Rust\" → \"Rust error handling\")\n- For debugging queries, keep error messages and stack traces intact\n- Use multiple searches only when topics are completely unrelated, not for comparisons",
           "input_schema": {
@@ -98,22 +389,22 @@
     "type": "stream",
     "status": 200,
     "headers": {
-      "content-type": "text/event-stream; charset=utf-8",
-      "minimax-request-id": "a968000222bc2077806e82e9026c61e3",
-      "x-session-id": "dbde59ba0c27eb64dd84a30469cd5d79",
-      "vary": "Accept-Encoding",
       "connection": "keep-alive",
+      "x-session-id": "4d24109d62d62608308e374de1b24422",
       "cache-control": "no-cache",
-      "trace-id": "05d6bd1a4ad47288095a82b8c0be9f44",
+      "date": "Sun, 08 Feb 2026 04:59:12 GMT",
+      "content-type": "text/event-stream; charset=utf-8",
       "transfer-encoding": "chunked",
-      "alb_request_id": "34ec3b794ad47aaa1e2b4ced559e9e85466be8f0",
-      "alb_receive_time": "1770490394.448",
-      "date": "Sat, 07 Feb 2026 18:53:16 GMT"
+      "trace-id": "05d74b20ec194c9ef5ae5625ac0cb4e7",
+      "vary": "Accept-Encoding",
+      "minimax-request-id": "d58c910b3a4e332b2a2623b4a4006402",
+      "alb_receive_time": "1770526752.067",
+      "alb_request_id": "8f5b8dc7325577144050f210188253f63aff54a7"
     },
     "sse_events": [
       {
         "event": "message_start",
-        "data": "{\"type\":\"message_start\",\"message\":{\"id\":\"05d6bd1a4ad47288095a82b8c0be9f44\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"MiniMax-M2.1\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":1893,\"output_tokens\":0},\"service_tier\":\"standard\"}}"
+        "data": "{\"type\":\"message_start\",\"message\":{\"id\":\"05d74b20ec194c9ef5ae5625ac0cb4e7\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[],\"model\":\"MiniMax-M2.1\",\"stop_reason\":null,\"stop_sequence\":null,\"usage\":{\"input_tokens\":944,\"output_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":6385},\"service_tier\":\"standard\"}}"
       },
       {
         "event": "ping",
@@ -125,19 +416,23 @@
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"用户问\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"The\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"的是\\\"硅谷附近有哪些好玩的地方\\\"，这是一个关于美国硅谷地区旅游景点的询问。我需要搜索更多相关信息来提供一个全面的回答。让我\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" user is confirming that \\\"Kaisen Kang\\\" is the person they were asking about - the Database Engineer from Singapore who focuses on OLAP database\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\"进行更多的搜索以获取更详细的信息。\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\" query engines. They mentioned this is \\\"the result of the analysis\\\" which suggests they may have been testing my search capabilities or wanted to identify this specific person\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"signature_delta\",\"signature\":\"385fc960c02fa9db4da667f2ab3d82898b66395b923cda46e22e3bee950c8cb3\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"thinking_delta\",\"thinking\":\".\\n\\nI should acknowledge this and provide a summary of what I found about Kaisen Kang.\"}}"
+      },
+      {
+        "event": "content_block_delta",
+        "data": "{\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"signature_delta\",\"signature\":\"045026e3bae33018c0c6f82a3e13a5f707cba7235c458d91f8fa3b5566ab8d94\"}}"
       },
       {
         "event": "content_block_stop",
@@ -149,147 +444,39 @@
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"# 硅谷附近好玩的地方\\n\\n硅谷位于加州旧\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"Great! So you're referring to **Kaisen Kang**\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"金山湾区南端，这里不仅有世界知名的科技公司，还有丰富的自然景观和文化\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" - the Database Engineer from Singapore.\\n\\nHere's a summary of what I found about him:\\n\\n## Kaisen Kang\\n\\n- **Location**: Singapore\\n\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"娱乐场所。以下按区域为您详细介绍：\\n\\n---\\n\\n## 一、硅谷核心区域（圣何塞/库比蒂诺/\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"- **Profession**: Database Engineer / OLAP Database & Performance Expert\\n- **Current Role**: Query Team Leader at **CelerData**\\n- **Open\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"山景城）\\n\\n### 🎢 主题公园与娱乐\\n| 景点名称 | 特色介绍 | \"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" Source Involvement**: **PMC member of StarRocks**\\n- **Focus Area**: OLAP database query engine\\n\\n### Background\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"位置 |\\n|---------|---------|------|\\n| **六旗探索王国** (Six Flags Discovery Kingdom) | 刺激\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"\\n\\nBased on his website (kangkaisen.com), he specializes in:\\n- OLAP (Online Analytical Processing) databases\\n- Query engine optimization\\n\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"的过山车和动物表演 | 瓦列霍 |\\n| **加州乐高乐园** (Leg\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"- Database performance\\n\\n### Notable Projects\\n\\n- **StarRocks**: An open-source MPP (Massively Parallel Processing) SQL analytical database where he serves as a PMC\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"oland California) | 适合家庭亲子游的乐高主题乐园 | 卡尔斯巴德 |\\n| **Great\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" (Project Management Committee) member\\n- **CelerData**: A company that provides enterprise-grade analytical database solutions based on StarRocks\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" America主题公园** | 传统美式主题公园，有过山车 | 圣克拉拉 |\\n\\n###\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"\\n\\nHe's clearly a technical expert in the database and data analytics space, particularly focused on high-performance analytical query engines.\\n\\nIs\"}}"
       },
       {
         "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" 🏛️ 文化博物馆\\n| 景点名称 | 特色介绍 | 位置 |\\n|---------|---------|------|\\n| **创新科技博物馆** (The Tech Interactive)\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" | 互动式科技博物馆，适合亲子 | 圣何塞 |\\n| **圣何塞艺术博物馆** | 艺术收藏与\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"展览 | 圣何塞市中心 |\\n| **玫瑰十字埃及博物馆** | 古埃及文物收藏 | 圣何塞 |\\n\\n###\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" 🏞️ 公园与自然\\n| 景点名称 | 特色介绍 | 位置 |\\n|---------|---------|------|\\n| **Winchester\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" Mystery House** | 神秘鬼屋，历史建筑 | 圣何塞 |\\n| ** Municipal Rose Garden** | 美丽的玫瑰花园 |\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" 圣何塞 |\\n| **Shoreline Park** | 滨海湿地公园，鸟类观赏 | 山景城 |\\n\\n---\\n\\n## 二、旧金\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"山市区景点\\n\\n| 景点名称 | 特色介绍 | 建议游玩时间 |\\n|---------|---------|-------------|\\n| **金门大桥** | 世界\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"著名悬索桥，标志性地标 | 1-2小时 |\\n| **渔人码头** | 海鲜美食、观光\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"游览 | 半天 |\\n| **恶魔岛** | 联邦监狱旧址，热门景点 | 半天 |\\n| **九曲花街**\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" | 世界上最弯曲的街道 | 30分钟 |\\n| **艺术宫** | 罗马式建筑，拍照圣地 | 1小时 |\\n| **金\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"门公园** | 城市绿洲，有多个博物馆 | 半天 |\\n| **双子峰** | 俯瞰全城最佳\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"视角 | 1小时 |\\n\\n---\\n\\n## 三、硅谷周边自然风光\\n\\n### 🌲 国家公园与森林\\n| \"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"景点名称 | 特色介绍 | 距离硅谷 |\\n|---------|---------|---------|\\n| **优胜美地国家公园** | 壮观的瀑布、峡谷、\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"巨杉 | 约3小时车程 |\\n| **缪尔森林** | 古老的红杉林 | 约1小时 |\\n| **红木国家\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"公园** | 千年红杉树 | 约2小时 |\\n\\n### 🍷 葡萄酒乡\\n| 景点名称 | 特色介绍 | 距离\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"硅谷 |\\n|---------|---------|---------|\\n| **纳帕谷** | 世界著名葡萄酒产区 | 约1.5小时 |\\n| **索诺玛县** | 葡萄酒\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"乡，适合一日游 | 约1.5小时 |\\n\\n### 🏔️ 高山湖泊\\n| 景点名称 | 特色介绍 |\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" 距离硅谷 |\\n|---------|---------|---------|\\n| **太浩湖** | 美丽的高山湖泊，滑雪胜地 | 约3.5小时 |\\n\\n---\\n\\n## 四、\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"硅谷科技公司总部游\\n\\n| 公司 | 地点 | 特色 |\\n|-----|------|------|\\n| **Google** | 山景城 |\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" 有游客中心 |\\n| **Apple Park** | 库比蒂诺 | 访客中心有苹果商店 |\\n| **Meta** | 门洛\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"帕克 | 园区开放参观 |\\n| **Netflix** | 洛斯加托斯 | 总部参观 |\\n\\n---\\n\\n## 五、其他热门\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"活动\\n\\n- **圣克拉拉Topgolf**：高尔夫与娱乐结合\\n- **圣何塞幽灵之旅**：惊悚主题\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"城市之旅\\n- **蒙特利湾**：观鲸、海底世界\\n- **圣克鲁兹**：海滨游乐\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"场、冲浪\\n\\n---\\n\\n## 📍 推荐行程建议\\n\\n1. **科技文化一日游**：创新\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"科技博物馆 → Google访客中心 → Winchester Mystery House\\n2. **自然风光一日游**：缪尔森林红杉\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"林 → 旧金山 → 金门大桥\\n3. **葡萄酒乡一日游**：纳帕谷品酒 → 索\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"诺玛\\n4. **深度探险**：优胜美地国家公园两日游\\n\\n如果您有特定兴趣（\"}}"
-      },
-      {
-        "event": "content_block_delta",
-        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\"科技、自然、美食、历史文化等），我可以为您定制更详细的行程建议！\"}}"
+        "data": "{\"type\":\"content_block_delta\",\"index\":1,\"delta\":{\"type\":\"text_delta\",\"text\":\" there anything specific you'd like to know about him or his work?\"}}"
       },
       {
         "event": "content_block_stop",
@@ -297,7 +484,7 @@
       },
       {
         "event": "message_delta",
-        "data": "{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"input_tokens\":1893,\"output_tokens\":1015}}"
+        "data": "{\"type\":\"message_delta\",\"delta\":{\"stop_reason\":\"end_turn\"},\"usage\":{\"input_tokens\":944,\"output_tokens\":306,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":6385}}"
       },
       {
         "event": "message_stop",
@@ -310,7 +497,7 @@
     "messages": [
       {
         "role": "system",
-        "content": "\nYou are a smart AI assistant to give user accurate answers.\n\n## ⚠️ CRITICAL: READ-ONLY OPERATIONS ONLY\n\n**IMPORTANT**: You are a read-only agent. All your tools must ONLY be used for reading and gathering information. You MUST NOT:\n- Create, modify, or delete any files\n- Execute commands that change system state\n- Perform any write operations\n- Make any modifications to the system\n\nYour tools are designed for information gathering only. Use them exclusively for reading, searching, and analyzing existing content.\n\nYour answer must follow the following rules:\n\n1. Write an accurate, detailed, and comprehensive response to the user's QUESTION.\n2. Your answer must be as detailed and organized as possible, Prioritize the use of lists, tables, and quotes to organize output structures.\n3. Your answer must be precise, of high-quality, and written by an expert using an unbiased and journalistic tone.\n4. You MUST ADHERE to the following formatting instructions:\n    - Use markdown to format paragraphs, lists, tables, and quotes whenever possible.\n    - Use headings level 4 to separate sections of your response, like \"#### Header\", but NEVER start an answer with a heading or title of any kind.\n    - Use single new lines for lists and double new lines for paragraphs.\n5. You only need to use web search tools when the user asks for the content of a web page.\n\nToday's date is 2026-02-07T07:30:13.807Z.\n",
+        "content": "\nYou are TalkCody, an expert Coding Planner and Lead Engineer. Your mandate is to orchestrate complex software tasks, manage sub-agents, and execute code changes with precision. You operate within a defined workspace and must strictly adhere to project constraints defined in AGENTS.md.\n\n# CORE IDENTITY & INTERACTION\n- **Orchestrator**: You clarify ambiguity immediately, then drive the task to completion.\n- **Directness**: Respond in the user's language. Omit conversational filler. Your output must be dense with utility (code, plans, or direct answers).\n- **Context Aware**: Your \"Source of Truth\" is the file system and AGENTS.md. Do not hallucinate APIs or dependencies.\n\n# TOOL USAGE STRATEGY\n\n## Concurrency & Batch Tool Calls\n\n**return as many tool calls as possible in a single response**.\n\n### Read Operations - ALWAYS Batch Together\n### Write/Edit Operations - Batch Different Files\n\n## Decision Matrix\n\n### 1. Direct Execution\nUse standard tools (`readFile`, `editFile`, `codeSearch`) for straightforward tasks.\n- **Scope**: Single-file edits, simple bug fixes, or quick info gathering.\n- **Logic**: When the task is clearly bounded and you have all necessary context.\n\n### 2. Strategic Delegation (`callAgent`)\nActively consider delegation for enhanced efficiency and quality. When using `callAgent`, **always** consider whether multiple sub-agents can work in parallel to maximize efficiency.\n- **Complex Analysis**: Multi-domain analysis (architecture, testing, security, performance) benefits from specialized focus.\n- **Parallel Processing**: Independent modules or components can be handled simultaneously for faster completion.\n- **Expertise Areas**: Tasks requiring deep domain knowledge (AI integration, database design, security audits) benefit from focused sub-agents.\n- **Large Scope**: When comprehensive analysis across multiple files/systems is needed.\n\n## Delegation Protocol\n- **Gather First**: Use `codeSearch`, `readFile`, `glob` tool or explore agent to gather context *before* calling an agent to ensure you pass valid context.\n- **Explicit Payload**:\n  - `context`: Dump relevant file contents/search results here. Do not assume the agent knows previous chat history.\n  - `targets`: List specific files to avoid overwrite conflicts.\n- **Write Tasks**: When delegating multi-file or multi-module modifications, break them into clearly separated, independent tasks to enable parallel execution without file conflicts.\n- **Task Decomposition**: Each sub-agent should handle a complete, self-contained modification unit (e.g., one component, one service, one feature module) with exact file boundaries.\n- **Dependency Management**: If tasks have dependencies, clearly define execution sequence or use separate delegation rounds.\n\n## callAgent Parallelism Strategy\n\n**ALWAYS maximize parallelism** - spawn multiple subagents in a single response when tasks are independent.\n\n### Strategy 1: Same Agent Type, Different Modules\nUse multiple instances of the same agent to gather context from different areas:\n```\n[Tool Calls]\n- callAgent: explore → gather context from /src/auth\n- callAgent: explore → gather context from /src/api\n- callAgent: explore → gather context from /src/db\n```\n\n### Strategy 2: Different Agent Types, Different Concerns\nUse specialized agents in parallel for different aspects of the same feature:\n```\n[Tool Calls]\n- callAgent: document-writer → write API documentation for the new feature\n- callAgent: coding → implement the core business logic\n- callAgent: code-review → write unit tests for the feature\n```\n\n### Parallelism Decision Matrix\n| Scenario | Strategy |\n|----------|----------|\n| Context gathering from multiple modules | Multiple parallel explore agents |\n| Feature implementation (code + docs + tests) | Parallel coding + document-writer + code-review |\n| Multi-file refactor | Multiple parallel coding agents with distinct targets |\n| Dependent tasks (A's output feeds B) | Sequential callAgent rounds |\n\n## Edit-File Tool\n\n**When to use edit-file tool vs write-file tool:**\n   - **edit-file**: File exists, making modifications (1-10 related changes per file)\n     - Single edit: One isolated change\n     - Multiple edits: Related changes to same file (imports + types, code)\n   - **write-file**: Creating a brand new file from scratch\n   - **write-file**: overwrite existing file when too many changes are needed\n\n# ENGINEERING GUIDELINES\n**Philosophy**: Keep It Simple, Stupid (KISS). Prioritize maintainability and readability over clever one-liners.\n\n1. **Building from Scratch**:\n   - Confirm requirements first.\n   - Sketch the architecture/module interaction mentally or in the plan.\n   - Implement modular, strictly typed (where applicable), and self-documenting code.\n\n2. **Modifying Existing Code**:\n   - **Understand First**: Read related files to grasp the current patterns and style.\n   - **Minimal Intrusion**: Make the smallest change necessary to achieve the goal. Avoid sweeping formatting changes unless requested.\n   - **Bug Fixes**: Locate the root cause via logs or reproduction steps. Ensure your fix addresses the root cause, not just the symptom. Verify with tests.\n\n3. **Refactoring**:\n   - Only change internal structure, never external behavior (unless it's an API breaking change request).\n   - Update all consumers of the refactored code.\n\n# WORKFLOW Mode: ACT vs. PLAN\n\n## ACT VS PLAN\n\n- For trivial and simple tasks, ACT directly using tools.\n- For complex tasks, PLAN first then ACT.\n- If the task involves multiple files, architectural changes, or high ambiguity, you MUST enter **PLAN MODE**.\n\n**CRITICAL RULE**: Check the environment context provided in the <env> XML section. If you see:\n```xml\n<env>\n  <plan_mode>TRUE</plan_mode>\n</env>\n```\n\nThis means PLAN MODE is ENABLED. When PLAN MODE is ENABLED (`<plan_mode>TRUE</plan_mode>`):\n- You MUST follow the PLAN MODE instructions provided below\n- You MUST delegate planning to the Plan Agent before executing complex tasks\n- DO NOT skip the planning phase\n\nWhen PLAN MODE is DISABLED (`<plan_mode>FALSE</plan_mode>`):\n- You can execute tasks directly without delegating to the Plan Agent\n- Use your judgment to decide between ACT and PLAN based on task complexity\n\n# PLAN MODE Workflow\n\n## Overview\n\nWhen PLAN MODE is ENABLED (indicated by `<plan_mode>TRUE</plan_mode>` in the <env> section), you should delegate planning to the specialized **Plan Agent**. The Plan Agent will:\n1. Explore the project context\n2. Generate a structured plan\n3. Return the approved plan content\n\n## Delegation to Plan Agent\n\n### How to Delegate\n\nUse `callAgent` with the \"plan\" agent:\n\n```\ncallAgent({\n  agentId: \"plan\",\n  task: \"Create a comprehensive implementation plan for: {USER_REQUIREMENT}\",\n  context: `\nProject Root: {workspaceRoot}\nTask ID: {taskId}\nCurrent Requirement: {USER_REQUIREMENT}\n\nRelevant Context:\n- Project structure and existing patterns\n- Related files that may be affected\n- Any specific constraints or requirements mentioned\n  `,\n  targets: []\n})\n```\n\nNote: you should pass enough context to the Plan Agent to enable it to generate a comprehensive plan.\n\n### Receiving Plan Agent Results\n\nThe Plan Agent returns plan by markdown format\n\n- Use the approved plan to create a todo list using **TodoWrite**\n- Execute each todo item\n- Update todo status as you complete them\n\n## Executing Approved Plans\n\nAfter receiving approved plan:\n\n1. **Create todos** using **TodoWrite** based on the approved plan\n2. **Execute todos systematically**:\n   - Process dependent tasks first\n   - Use parallel execution for independent tasks\n   - Update todo status after each completion\n3. **Report progress** to user\n4. **Handle errors** gracefully with clear messages\n\n# SAFETY & BOUNDARIES\n- **Workspace Confinement**: strict operations within the allowed root directories.\n- **Non-Destructive**: Never delete non-trivial code without explicit confirmation in the Plan.\n- **Secrets Management**: Never print or hardcode credentials/secrets.\n\n# OBJECTIVE\nYour goal is not to chat, but to ship. Measure success by:\n1. Accuracy of the solution.\n2. Stability of the code.\n3. Adherence to existing project styles.\n\n# Proactively\n\nActively verify completion by running the relevant checks yourself.\n\n- If you fix a test failure, run the tests and confirm they pass.\n- If you fix a compilation/build error, run the build/compile and confirm success.\n- Do not just provide commands for the user to run instead.\n\n\n# Rules\n\n- The user may provide a file's contents directly in their message, in which case you shouldn't use the read_file tool to get the file contents again since you already have it.\n- Be precise with replacements to avoid errors\n- Follow existing project patterns and conventions\n- Answer the user's question directly with a concise answer; do not generate new Markdown files to answer the user's question.\n\n\n---\n\nIMPORTANT: Here is important information about the environment you are running in:\n<env>\n<working_directory>/Users/kks/mygit/talkcody</working_directory>\n<is_git_repo>Yes</is_git_repo>\n<platform>mac_arm</platform>\n<today_date>2026-02-07</today_date>\n<plan_mode>FALSE</plan_mode>\n</env>\n\n---\n\n## Markdown Context\n\n<project>\n# Project Development Guide for AI Agents\n\n## Project Overview\n\n- Project Name: TalkCody\n- Description: Desktop AI Coding App for macOS, Windows, and Linux\n\n## Technology Stack\n\n### Frontend\n\n- Framework: React 19\n- Language: TypeScript\n- Styling: Tailwind CSS + Shadcn UI\n- Testing: Vitest\n- State Management: Zustand\n\n### Backend\n\n- Framework: Tauri 2\n- Language: Rust\n\n### Database\n\n- Type: SQLite\n\n## Project Structure\n\n```\ntalkcody/\n│\n├── src/                    # Main source code directory\n│   ├── components/         # React UI components\n│   ├── hooks/              # Custom React hooks\n│   ├── lib/                # Utility functions and shared logic\n│   ├── pages/              # Page components\n│   ├── styles/             # Global styles and CSS\n│   └── types/              # TypeScript type definitions\n|   ├── services/           # AI, database and other services\n|   ├── utils/\n│\n├── src-tauri/              # Rust backend code\n│   ├── src/                # Rust source files\n│   ├── Cargo.toml\n│   └── tauri.conf.json\n|   package.json\n|   tsconfig.json\n|   vite.config.ts\n```\n\n### Backend API Service\n\napps/api/ - API Service\n\nTest Command:\n```\ncd apps/api\nbun run test\n```\n\n### locales Directory\n\n- src/locales/en.ts - English locale file\n- src/locales/zh.ts - Chinese locale file\n- src/locales/types.ts - Locale type definitions\n- src/hooks/use-locale.ts - Custom hook for locale management\n\n### Important Notes\n\n- The docs directory is the user documentation website and does not need to be modified during development.\n\n## Development Guidelines\n\n1. Frontend Development Rules:\n   - Solve functions on the frontend using TypeScript when possible\n   - Using Functional Components with Hooks (Classless Components)\n   - Use Shadcn UI components (no need to provide source code)\n   - Use English for comments and text\n\n2. Naming Conventions:\n   - File names: kebab-case (e.g., `user-profile.ts`)\n   - Use Sonner component for toast notifications\n\n3. Bug fixing:\n   - must write a test case to cover the bug\n   - Fix the bug and ensure all tests pass\n\n4. Validation and Linting:\n   - Use `bun run lint` to check code quality before committing changes.\n   - Use `bun run tsc` to ensure type safety.\n   - Use `bun run test` to run all tests and ensure functionality.\n\n### bun run lint Fixes\n\n- Cannot modify the rules in biome.json; only fix code to pass lint checks.\n- When fixing code, try to keep the original logic unchanged and avoid introducing new issues.\n- Perform fixes in parallel as much as possible to reduce fixing time.\n- Do not use biome's unsafe fixes; you should manually fix the code.\n\n## Useful Bash Commands\n\n### Project Setup\n\n```bash\n# Run Tauri app\nbun run tauri dev\n\n# Build Tauri app\nbun run tauri build\n```\n\n### Development Workflow\n\n```bash\n\nbun run tsc\n\n# Lint code\nbun run lint\n\n# Run tests\nbun run test\n\n# Run single test file\nbun run test:file src/path/to/your/test-file.test.tsx\n\n# build\nbun run build\n```\n\nNote: You couldn't use `bun test` command. must use `bun run test` instead.\n\n### Log Directory\n\nTalkCody runtime log path:\n\n```\n~/Library/Logs/com.talkcody/talkcody.log\n```\n\nThe log in macOS dev env:\n\n```\n~/Library/Logs/com.com.talkcody.dev/TalkCody\\ Dev.log\n```\n\n### App data directory\n\nTalkCody app data path:\n\n```\n~/Library/Application Support/com.talkcody\n```\n\n## AI Code Generation Tips\n\n### Files import in TS code\n\nyou should use '@tauri-apps/api/path'. like this:\n\n```typescript\nimport { join, normalize, isAbsolute, appDataDir, dirname} from '@tauri-apps/api/path';\n```\n\n\nWhen generating code, consider:\n\n- Follow React functional component patterns\n- Use Tailwind CSS for styling\n- Implement responsive design\n- UI must support dark mode\n- Use accurate type definitions and do not use `any` types\n- Keep components modular and reusable\n- Use zustand for state management\n- Try to avoid using dynamic imports\n- User-visible messages and text need to support both English and Chinese.\n- Platform-related functions must be able to work simultaneously on macOS, Windows, and Linux platforms.\n- when need fetch, use `simpleFetch` from `@/lib/tauri-fetch`, not `fetch`.\n- When adding test cases, you should minimize mocking as much as possible.\n</project>\n\n---\n\nOUTPUT FORMAT INSTRUCTIONS:\nOutput the response in standard Markdown with headings, lists, and code blocks.\n\n---\n\n====\n# Available Subagents\n\nThe following agents are available for delegation via the `callAgent` tool.\nPick the best-fit subagent for each task (do not assume only one exists):\n\n- **plan**: Professional software planning expert that generates structured plans and obtains user approval\n- **code-review**: Multi-source code review specialist for GitHub PRs, local commits, git diffs, and project files\n- **explore**: Efficient single-task information gathering\n- **document-writer**: Creates comprehensive documentation matching repository standards\n- **test-writer**: Specialist in writing comprehensive tests matching repository standards\n- **coding**: Expert programming assistant for code reviews, debugging, and development\n- **china-options-buyer**: professional China commodity options trading strategist focused on long (buyer) strategies.\n- **api-designer**: API architecture expert designing scalable, developer-friendly interfaces. Creates REST and GraphQL APIs with comprehensive documentation, focusing on consistency, performance, and developer experience.\n- **code-reviewer**: Expert code reviewer specializing in code quality, security vulnerabilities, and best practices across multiple languages. Masters static analysis, design patterns, and performance optimization with focus on maintainability and technical debt reduction.\n\n## Delegation Guidelines\n\n- **Choose wisely**: Select the agent best suited for the specific task\n- **Provide context**: Subagents start with empty context; pass all necessary information\n- **Set targets**: Specify files/modules to avoid conflicts in parallel execution\n- **Batch independent tasks**: Run multiple subagents in parallel when tasks are independent\n====\n\nIMPORTANT: You MUST respond in English.",
         "providerOptions": {
           "anthropic": {
             "cacheControl": {
@@ -321,24 +508,18 @@
       },
       {
         "role": "user",
-        "content": "硅谷附近有哪些好玩的地方",
-        "providerOptions": {
-          "openaiCompatible": {
-            "cache_control": {
-              "type": "ephemeral"
-            }
-          }
-        }
+        "content": "Who is Kang Kai Sen? Kang Kai Sen.",
+        "providerOptions": null
       },
       {
         "role": "assistant",
         "content": [
           {
             "type": "tool-call",
-            "toolCallId": "call_function_c8we1d47vyuz_1",
+            "toolCallId": "call_function_bppjyitxxcu6_1",
             "toolName": "webSearch",
             "input": {
-              "query": "硅谷附近旅游景点 2025 圣荷西 旧金山湾区"
+              "query": "Kang Kai Sen"
             },
             "provider_metadata": null
           }
@@ -350,18 +531,321 @@
         "content": [
           {
             "type": "tool-result",
-            "toolCallId": "call_function_c8we1d47vyuz_1",
+            "toolCallId": "call_function_bppjyitxxcu6_1",
             "toolName": "webSearch",
             "output": {
               "type": "text",
-              "value": "[\n  {\n    \"title\": \"在加利福尼亚州圣何塞旅行时不容错过的7 个优质景点 - 畅游美国\",\n    \"url\": \"http://www.gousa.cn/experience/7-exciting-stops-make-during-your-stay-san-jose-california\",\n    \"content\": \"在群山环抱的美国科技圣地，您可以找到Googleplex、创新科技博物馆和天文台这些主要游览景点。荣登圣何塞旅游推荐榜的七个景点囊括了壮美的红木森林、令人欢笑不断的动物园 ...\"\n  },\n  {\n    \"title\": \"圣何塞10 大景点玩乐\",\n    \"url\": \"https://cn.tripadvisor.com/Attractions-g33020-Activities-San_Jose_California.html\",\n    \"content\": \"从圣何塞出发- 迷人的优胜美地国家公园全日游 · 库比蒂诺出发的迷人纳帕和索诺玛葡萄酒之旅 · 从圣何塞出发的太浩湖小团体旅游 · 圣何塞出发的优胜美地国家公园和巨型红杉之旅.\"\n  },\n  {\n    \"title\": \"聖何塞自由行旅遊攻略（2026）：附近熱門好去處、人氣景點\",\n    \"url\": \"https://hk.trip.com/travel-guide/destination/san-jose-34515/\",\n    \"content\": \"探索聖荷西的埃及秘密 走進法老與棕櫚樹環繞的花園世界，來到聖荷西的玫瑰十字埃及博物館和玫瑰十字公園，這裡是歷史愛好者和好奇旅人的天堂！欣賞真正的埃及文物、正宗的神 ...\"\n  },\n  {\n    \"title\": \"旧金山旅游攻略2026\",\n    \"url\": \"https://www.meilvtong.com/viewthread.php?tid=5\",\n    \"content\": \"旧金山的景点 · 1. 金门大桥Golden Gate Bridge · 2. 恶魔岛Alcatraz Island · 3. 渔人码头Fisherman's Wharf · 4. 九曲花街Lombard Street · 5. 旧金山艺术宫 ...\"\n  },\n  {\n    \"title\": \"2026聖荷西旅遊攻略\",\n    \"url\": \"https://www.expedia.com.hk/San-Jose.dx602703\",\n    \"content\": \"旧金山至锡安,布莱斯,大峡谷4日游 · 圣何塞:优胜美地和巨型红杉一日游 · 硅谷科技之旅 · 圣何塞幽灵之旅:镰刀、牺牲和剪影 · 初学者户外攀岩-湾区 · 红杉树& 火山口湖国家公园& ...\"\n  },\n  {\n    \"title\": \"我們最推薦的加州聖荷西活動\",\n    \"url\": \"https://www.getyourguide.com/zh-tw/sheng-he-xi-l1177/\",\n    \"content\": \"您會在半圓頂(Half Dome)、艾爾卡皮坦(El Capitan)、優勝美地瀑布(Yosemite Falls) 和新娘瀑布(Bridalveil Falls) 停留片刻，並分配充足的時間「自拍」。\"\n  },\n  {\n    \"title\": \"聖塔克拉拉最值得做的60 件事\",\n    \"url\": \"https://www.discoversantaclara.org/zh-hk/blog/top-things-to-do/\",\n    \"content\": \"Topgolf 位於聖荷西，距離Santa Clara 只有幾分鐘的路程，提供獨特的運動與娛樂結合。無論您是經驗豐富的高爾夫球手或是完全的初學者，都可以享受將植入微型晶片的高爾夫球擊 ...\"\n  },\n  {\n    \"title\": \"[2026] 美西自由行15 天行程表(開車& 不開車都有) & 超過90 ...\",\n    \"url\": \"https://timtingtravel.com/usa-westcoast/\",\n    \"content\": \"15 天美西自由行不開車行程表分享 · Hollywood Walk of Fame (星光大道) · Beverly Hills (比佛利山莊) · Getty Center (蓋蒂藝術博物館) · Santa Monica Beach (聖莫尼卡碼頭 ...\"\n  },\n  {\n    \"title\": \"舊金山必去20大景點！沒去過別說你來過舊金山！\",\n    \"url\": \"https://www.klook.com/zh-TW/blog/tip-top-20-spots-san-fransisco-america/\",\n    \"content\": \"舊金山景點｜金門大橋Golden Gate Bridge · 舊金山景點｜藝術宮Palace of Fine Arts · 舊金山景點｜阿拉莫廣場Alamo Square · 舊金山景點｜卡斯楚街Castro Street ...\"\n  },\n  {\n    \"title\": \"2025 旧金山旅游攻略，交通、住宿、市区及周边景点全覆盖\",\n    \"url\": \"https://www.17ybm.com/san-francisco/\",\n    \"content\": \"旧金山周边景点 · 硅谷Silicon Valley · 缪尔森林国家纪念地Muir Woods National Monument · 太浩湖Lake Tahoe · 纳帕谷Napa Valley · 六旗探索王国Six Flags ...\"\n  }\n]"
+              "value": "[{\"title\":\"Kaisen Kang | OLAP Database & Performance Expert\",\"url\":\"https://kangkaisen.com/\",\"content\":\"I'm Kaisen Kang. I'm a Database Engineer currently residing in Singapore. I focus on OLAP database query engine. CelerData Query Team Leader; StarRocks PMC ...\"},{\"title\":\"แกงไก่วุ้นเส้น Kang Gai Woon Sen A lesser known authentic spicy ...\",\"url\":\"https://www.facebook.com/groups/authenticthaicooking/posts/3000287206960570/\",\"content\":\"How to cook Kang Kai sai woonsen 1.pound all ingredients together, dried chili shallots galangal and lemonglass 2. Take chili curry to fry with ...\"},{\"title\":\"Chiang Kai-shek - Wikipedia\",\"url\":\"https://en.wikipedia.org/wiki/Chiang_Kai-shek\",\"content\":\"Chiang Kai-shek was a Chinese politician, revolutionary, and military commander who led the Republic of China (ROC) from 1928 until his death in 1975.\"},{\"title\":\"How to make kang kai my style (LAO FOOD) Home Made By Kaysone\",\"url\":\"https://www.youtube.com/watch?v=hPAf-yZeD2E\",\"content\":\"\\\"LIKE\\\" my Fan Page On facebook - https://www.facebook.com/pg/HomeMadeByKaysone.\"},{\"title\":\"Kang Kai - YouTube\",\"url\":\"https://www.youtube.com/@KangKaiCHN\",\"content\":\"Kang Kai · 2011 Chinese Gymnastics National Championships · 2009 Gymnastics World Championships - Men's All-Around Final · 2009 Gymnastics World Championships - ...\"},{\"title\":\"‪KAI KANG‬ - ‪Google Scholar‬\",\"url\":\"https://scholar.google.com/citations?user=hs9xDe8AAAAJ&hl=en\",\"content\":\"KAI KANG. Sun Yat-sen University. Verified email at mail.sysu.edu.cn - Homepage · Latent variable modelingBayesian analysisLongitudinal data ...\"},{\"title\":\"2 \\\"Kaisen Kang\\\" profiles - LinkedIn\",\"url\":\"https://www.linkedin.com/pub/dir/Kaisen/Kang\",\"content\":\"View the profiles of professionals named \\\"Kaisen Kang\\\" on LinkedIn. There are 2 professionals named \\\"Kaisen Kang\\\", who use LinkedIn to exchange information, ...\"},{\"title\":\"Work Experience | Kaisen Kang\",\"url\":\"https://kangkaisen.com/about.html\",\"content\":\"Hello, I'm Kaisen Kang, I'm a Database Engineer currently residing in Singapore.I focus on OLAP database query engine.\"},{\"title\":\"Kang Kai (康凯) - MyDramaList\",\"url\":\"https://mydramalist.com/people/3122-kang-kai\",\"content\":\"Name: Kang Kai · Native name: 康凯 · Nationality: Chinese · Gender: Male · Born: March 1, 1972 · Age: 53.\"},{\"title\":\"Kai Kang - IMDb\",\"url\":\"https://www.imdb.com/name/nm1169107/\",\"content\":\"Kai Kang was born on 5 April 1947 in Taipei, Taiwan. He is an actor, known for Fierce Among Strong (1975), Da quan mo gui (1973) and Bi hu you long (1972).\"}]"
             }
           }
         ],
         "providerOptions": null
+      },
+      {
+        "role": "assistant",
+        "content": "I couldn't find specific information about a person named **\"Kang Kai Sen\"** in my search results.\n\nHowever, I found a few people with similar names who may be relevant:\n\n1. **Kaisen Kang** - A Database Engineer residing in Singapore, working as a Query Team Leader at CelerData and StarRocks PMC. He focuses on OLAP database query engines. His personal website: kangkaisen.com\n\n2. **Kang Kai (康凯)** - A Chinese male actor born on March 1, 1972.\n\n3. **Kai Kang** - An actor born on April 5, 1947, in Taipei, Taiwan.\n\nCould you provide more context or clarify:\n- Is this a personal connection (friend, colleague, family member)?\n- Is there a different spelling of the name?\n- Are you referring to one of the people listed above?\n\nIf this is someone in your personal or professional network, I wouldn't have information about them since I only have access to publicly available online information.",
+        "providerOptions": null
+      },
+      {
+        "role": "user",
+        "content": "The first one is the result of the analysis.",
+        "providerOptions": null
       }
     ],
     "tools": [
+      {
+        "type": "function",
+        "name": "bash",
+        "description": "Execute shell commands safely on the system.\n\nThis tool allows you to run shell commands with built-in safety restrictions. Choose commands based on the Platform info in the environment context:\n\n**Platform-specific command reference:**\n\n| Task | macOS/Linux | Windows |\n|------|-------------|---------|\n| List files | ls -la | dir |\n| Find files | find, fd | dir /s, where |\n| Search content | grep, rg | findstr |\n| Show file | cat, head, tail | type |\n| Current directory | pwd | cd |\n| Environment vars | env, export | set |\n| Process list | ps aux | tasklist |\n| Kill process | kill | taskkill |\n| Network info | ifconfig, ip | ipconfig |\n| Download file | curl, wget | curl, Invoke-WebRequest |\n| Archive | tar, zip | tar, Compress-Archive |\n| Package manager | brew (mac), apt (linux) | winget, choco |\n\n**Cross-platform commands:**\n- Git operations (git)\n- Node.js (node, npm, yarn, pnpm, bun)\n- Build tools (make, cargo, go)\n- Python (python, pip)\n\nThe command will be executed in the current working directory.\n\n**Background execution:**\nUse `run_in_background: true` to run long-running commands in the background. The command will continue running even if it produces no output for an extended period. Use this for:\n- Development servers\n- Long-running build processes\n- Continuous processes\n\nOutput can be read using `cat` or `tail -f` on the output file path returned in the result.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "runInBackground": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "command"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "callAgent",
+        "description": "Call a registered sub-agent for a focused task. Subagents start with empty context.\n\n**Parameters**\n- `agentId`: The agent to call (see Available Subagents in system prompt)\n- `task`: Clear outcome description (2-5 sentences)\n- `context`: All necessary artifacts (file contents, schemas, requirements)\n- `targets`: Files/modules this agent will touch (for conflict avoidance)\n\n**Key Rules**\n- Subagents have zero history - pass all needed context\n- Use targets to enable safe parallel execution\n- For parallel calls, issue multiple callAgent in same response",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "agentId": {
+              "type": "string"
+            },
+            "context": {
+              "type": "string"
+            },
+            "targets": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "task": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "agentId",
+            "task",
+            "context"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "readFile",
+        "description": "Use this tool to read the contents of an existing file.\n\nThis tool will return the complete file content as a string by default.\nYou can optionally specify a starting line and number of lines to read a specific portion of the file.\n\nThe file path should be an absolute path.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "file_path": {
+              "type": "string"
+            },
+            "line_count": {
+              "type": "number"
+            },
+            "start_line": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "file_path"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "codeSearch",
+        "description": "Use this tool when you need to find files containing specific patterns.\n\nUse this to find code patterns, function definitions, variable usage, or any text in the codebase.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "file_types": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "path": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern",
+            "path"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "glob",
+        "description": "- Fast file pattern matching tool that works with any codebase size\n- Supports glob patterns like \"**/*.js\" or \"src/**/*.ts\"\n- Returns matching file paths sorted by modification time\n- Use this tool when you need to find files by name patterns",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "lsp",
+        "description": "Perform Language Server Protocol (LSP) operations like go-to-definition, references, hover, and symbols.\n\nProvide a file path and a 1-based line/character position as shown in editors.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "character": {
+              "type": "number"
+            },
+            "filePath": {
+              "type": "string"
+            },
+            "line": {
+              "type": "number"
+            },
+            "operation": {
+              "enum": [
+                "goToDefinition",
+                "findReferences",
+                "hover",
+                "documentSymbol",
+                "workspaceSymbol",
+                "goToImplementation",
+                "prepareCallHierarchy",
+                "incomingCalls",
+                "outgoingCalls"
+              ],
+              "type": "string"
+            },
+            "query": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "operation",
+            "filePath"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "listFiles",
+        "description": "Use this tool to list files and directories in a specified directory.\n\nThis tool will return a concise string format showing directories and files grouped by their parent directory. It's useful for exploring directory structure, finding files, or understanding project organization.\n\nThe directory path must be absolute.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "directory_path": {
+              "type": "string"
+            },
+            "max_depth": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "directory_path"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "todoWrite",
+        "description": "Creates and manages todo items for task tracking and progress management in the current session.\nUse this tool to create and manage todo items for tracking tasks and progress. This tool provides comprehensive todo management:\n\n## When to Use This Tool\n\nUse this tool proactively in these scenarios:\n\n1. **Complex multi-step tasks** - When a task requires 3 or more distinct steps or actions\n2. **Non-trivial and complex tasks** - Tasks that require careful planning or multiple operations\n3. **User explicitly requests todo list** - When the user directly asks you to use the todo list\n4. **User provides multiple tasks** - When users provide a list of things to be done (numbered or comma-separated)\n5. **After receiving new instructions** - Immediately capture user requirements as todos\n6. **When you start working on a task** - Mark it as in_progress BEFORE beginning work. Ideally you should only have one todo as in_progress at a time\n7. **After completing a task** - Mark it as completed and add any new follow-up tasks discovered during implementation\n\n## Task States and Management\n\n1. **Task States**: Use these states to track progress:\n   - pending: Task not yet started\n   - in_progress: Currently working on (limit to ONE task at a time)\n   - completed: Task finished successfully\n\n2. **Task Management**:\n   - Update task status in real-time as you work\n   - Mark tasks complete IMMEDIATELY after finishing (don't batch completions)\n   - Only have ONE task in_progress at any time\n   - Complete current tasks before starting new ones\n   - Remove tasks that are no longer relevant from the list entirely\n\n3. **Task Completion Requirements**:\n   - ONLY mark a task as completed when you have FULLY accomplished it\n   - If you encounter errors, blockers, or cannot finish, keep the task as in_progress\n   - When blocked, create a new task describing what needs to be resolved\n   - Never mark a task as completed if:\n     - Tests are failing\n     - Implementation is partial\n     - You encountered unresolved errors\n     - You couldn't find necessary files or dependencies\n\n4. **Task Breakdown**:\n   - Create specific, actionable items\n   - Break complex tasks into smaller, manageable steps\n   - Use clear, descriptive task names\n\n## Tool Capabilities\n\n- **Create new todos**: Add tasks with content, priority, and status\n- **Update existing todos**: Modify any aspect of a todo (status, priority, content)\n- **Delete todos**: Remove completed or irrelevant tasks\n- **Batch operations**: Update multiple todos in a single operation\n- **Clear all todos**: Reset the entire todo list\n\nWhen in doubt, use this tool. Being proactive with task management demonstrates attentiveness and ensures you complete all requirements successfully.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "todos": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "enum": [
+                      "pending",
+                      "in_progress",
+                      "completed"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "content",
+                  "status",
+                  "id"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "todos"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "writeFile",
+        "description": "Use this tool to write content to a file.\n\nThis tool will create or overwrite a file with the provided content. It will automatically create directories if they don't exist. It's useful for creating new files or updating existing files in the project.\n\nThe file path should be an absolute path.",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "file_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "content"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
+      {
+        "type": "function",
+        "name": "editFile",
+        "description": "Edit an existing file with one or more text replacements.\n\nCRITICAL RULES:\n1. All old_string values must match EXACTLY - including spaces, tabs, and newlines\n2. Use readFile tool FIRST to see the exact content\n3. Include 3-5 lines of context before and after each change\n4. For file creation, use write-file tool instead\n\nHOW TO CHOOSE THE NUMBER OF EDITS:\n\nSingle Edit (edits.length = 1):\n✅ One isolated change\n✅ Simple fix or update in one location\n✅ Experimental/uncertain replacement\n✅ When you need to verify the result before continuing\n\nExample: \"Add an import statement\" → 1 edit\n\nMultiple Edits (edits.length = 2-10):\n✅ Related changes to the same file\n✅ Batch updates with similar patterns (e.g., rename all occurrences)\n✅ Refactoring that touches multiple parts (imports + function + types)\n✅ You're confident all replacements will work\n\nExample: \"Add import + update function + update type\" → 3 edits\n\nIMPORTANT: Maximum 10 edits per call. For larger refactorings, make multiple calls.\n\nBest practice workflow:\n1. Use readFile to see current content\n2. Identify all changes you want to make to this file\n3. For each change, copy EXACT text with context\n4. Create edit block(s) with old_string and new_string\n5. Call edit-file with your edit(s)",
+        "parameters": {
+          "additionalProperties": false,
+          "properties": {
+            "edits": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "new_string": {
+                    "type": "string"
+                  },
+                  "old_string": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "old_string",
+                  "new_string"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "file_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "file_path",
+            "edits"
+          ],
+          "type": "object"
+        },
+        "strict": true
+      },
       {
         "type": "function",
         "name": "webSearch",
@@ -437,158 +921,50 @@
       "text": "",
       "provider_metadata": {
         "anthropic": {
-          "signature": "385fc960c02fa9db4da667f2ab3d82898b66395b923cda46e22e3bee950c8cb3"
+          "signature": "045026e3bae33018c0c6f82a3e13a5f707cba7235c458d91f8fa3b5566ab8d94"
         }
       }
     },
     {
       "type": "text-delta",
-      "text": "# 硅谷附近好玩的地方\n\n硅谷位于加州旧"
+      "text": "Great! So you're referring to **Kaisen Kang**"
     },
     {
       "type": "text-delta",
-      "text": "金山湾区南端，这里不仅有世界知名的科技公司，还有丰富的自然景观和文化"
+      "text": " - the Database Engineer from Singapore.\n\nHere's a summary of what I found about him:\n\n## Kaisen Kang\n\n- **Location**: Singapore\n"
     },
     {
       "type": "text-delta",
-      "text": "娱乐场所。以下按区域为您详细介绍：\n\n---\n\n## 一、硅谷核心区域（圣何塞/库比蒂诺/"
+      "text": "- **Profession**: Database Engineer / OLAP Database & Performance Expert\n- **Current Role**: Query Team Leader at **CelerData**\n- **Open"
     },
     {
       "type": "text-delta",
-      "text": "山景城）\n\n### 🎢 主题公园与娱乐\n| 景点名称 | 特色介绍 | "
+      "text": " Source Involvement**: **PMC member of StarRocks**\n- **Focus Area**: OLAP database query engine\n\n### Background"
     },
     {
       "type": "text-delta",
-      "text": "位置 |\n|---------|---------|------|\n| **六旗探索王国** (Six Flags Discovery Kingdom) | 刺激"
+      "text": "\n\nBased on his website (kangkaisen.com), he specializes in:\n- OLAP (Online Analytical Processing) databases\n- Query engine optimization\n"
     },
     {
       "type": "text-delta",
-      "text": "的过山车和动物表演 | 瓦列霍 |\n| **加州乐高乐园** (Leg"
+      "text": "- Database performance\n\n### Notable Projects\n\n- **StarRocks**: An open-source MPP (Massively Parallel Processing) SQL analytical database where he serves as a PMC"
     },
     {
       "type": "text-delta",
-      "text": "oland California) | 适合家庭亲子游的乐高主题乐园 | 卡尔斯巴德 |\n| **Great"
+      "text": " (Project Management Committee) member\n- **CelerData**: A company that provides enterprise-grade analytical database solutions based on StarRocks"
     },
     {
       "type": "text-delta",
-      "text": " America主题公园** | 传统美式主题公园，有过山车 | 圣克拉拉 |\n\n###"
+      "text": "\n\nHe's clearly a technical expert in the database and data analytics space, particularly focused on high-performance analytical query engines.\n\nIs"
     },
     {
       "type": "text-delta",
-      "text": " 🏛️ 文化博物馆\n| 景点名称 | 特色介绍 | 位置 |\n|---------|---------|------|\n| **创新科技博物馆** (The Tech Interactive)"
-    },
-    {
-      "type": "text-delta",
-      "text": " | 互动式科技博物馆，适合亲子 | 圣何塞 |\n| **圣何塞艺术博物馆** | 艺术收藏与"
-    },
-    {
-      "type": "text-delta",
-      "text": "展览 | 圣何塞市中心 |\n| **玫瑰十字埃及博物馆** | 古埃及文物收藏 | 圣何塞 |\n\n###"
-    },
-    {
-      "type": "text-delta",
-      "text": " 🏞️ 公园与自然\n| 景点名称 | 特色介绍 | 位置 |\n|---------|---------|------|\n| **Winchester"
-    },
-    {
-      "type": "text-delta",
-      "text": " Mystery House** | 神秘鬼屋，历史建筑 | 圣何塞 |\n| ** Municipal Rose Garden** | 美丽的玫瑰花园 |"
-    },
-    {
-      "type": "text-delta",
-      "text": " 圣何塞 |\n| **Shoreline Park** | 滨海湿地公园，鸟类观赏 | 山景城 |\n\n---\n\n## 二、旧金"
-    },
-    {
-      "type": "text-delta",
-      "text": "山市区景点\n\n| 景点名称 | 特色介绍 | 建议游玩时间 |\n|---------|---------|-------------|\n| **金门大桥** | 世界"
-    },
-    {
-      "type": "text-delta",
-      "text": "著名悬索桥，标志性地标 | 1-2小时 |\n| **渔人码头** | 海鲜美食、观光"
-    },
-    {
-      "type": "text-delta",
-      "text": "游览 | 半天 |\n| **恶魔岛** | 联邦监狱旧址，热门景点 | 半天 |\n| **九曲花街**"
-    },
-    {
-      "type": "text-delta",
-      "text": " | 世界上最弯曲的街道 | 30分钟 |\n| **艺术宫** | 罗马式建筑，拍照圣地 | 1小时 |\n| **金"
-    },
-    {
-      "type": "text-delta",
-      "text": "门公园** | 城市绿洲，有多个博物馆 | 半天 |\n| **双子峰** | 俯瞰全城最佳"
-    },
-    {
-      "type": "text-delta",
-      "text": "视角 | 1小时 |\n\n---\n\n## 三、硅谷周边自然风光\n\n### 🌲 国家公园与森林\n| "
-    },
-    {
-      "type": "text-delta",
-      "text": "景点名称 | 特色介绍 | 距离硅谷 |\n|---------|---------|---------|\n| **优胜美地国家公园** | 壮观的瀑布、峡谷、"
-    },
-    {
-      "type": "text-delta",
-      "text": "巨杉 | 约3小时车程 |\n| **缪尔森林** | 古老的红杉林 | 约1小时 |\n| **红木国家"
-    },
-    {
-      "type": "text-delta",
-      "text": "公园** | 千年红杉树 | 约2小时 |\n\n### 🍷 葡萄酒乡\n| 景点名称 | 特色介绍 | 距离"
-    },
-    {
-      "type": "text-delta",
-      "text": "硅谷 |\n|---------|---------|---------|\n| **纳帕谷** | 世界著名葡萄酒产区 | 约1.5小时 |\n| **索诺玛县** | 葡萄酒"
-    },
-    {
-      "type": "text-delta",
-      "text": "乡，适合一日游 | 约1.5小时 |\n\n### 🏔️ 高山湖泊\n| 景点名称 | 特色介绍 |"
-    },
-    {
-      "type": "text-delta",
-      "text": " 距离硅谷 |\n|---------|---------|---------|\n| **太浩湖** | 美丽的高山湖泊，滑雪胜地 | 约3.5小时 |\n\n---\n\n## 四、"
-    },
-    {
-      "type": "text-delta",
-      "text": "硅谷科技公司总部游\n\n| 公司 | 地点 | 特色 |\n|-----|------|------|\n| **Google** | 山景城 |"
-    },
-    {
-      "type": "text-delta",
-      "text": " 有游客中心 |\n| **Apple Park** | 库比蒂诺 | 访客中心有苹果商店 |\n| **Meta** | 门洛"
-    },
-    {
-      "type": "text-delta",
-      "text": "帕克 | 园区开放参观 |\n| **Netflix** | 洛斯加托斯 | 总部参观 |\n\n---\n\n## 五、其他热门"
-    },
-    {
-      "type": "text-delta",
-      "text": "活动\n\n- **圣克拉拉Topgolf**：高尔夫与娱乐结合\n- **圣何塞幽灵之旅**：惊悚主题"
-    },
-    {
-      "type": "text-delta",
-      "text": "城市之旅\n- **蒙特利湾**：观鲸、海底世界\n- **圣克鲁兹**：海滨游乐"
-    },
-    {
-      "type": "text-delta",
-      "text": "场、冲浪\n\n---\n\n## 📍 推荐行程建议\n\n1. **科技文化一日游**：创新"
-    },
-    {
-      "type": "text-delta",
-      "text": "科技博物馆 → Google访客中心 → Winchester Mystery House\n2. **自然风光一日游**：缪尔森林红杉"
-    },
-    {
-      "type": "text-delta",
-      "text": "林 → 旧金山 → 金门大桥\n3. **葡萄酒乡一日游**：纳帕谷品酒 → 索"
-    },
-    {
-      "type": "text-delta",
-      "text": "诺玛\n4. **深度探险**：优胜美地国家公园两日游\n\n如果您有特定兴趣（"
-    },
-    {
-      "type": "text-delta",
-      "text": "科技、自然、美食、历史文化等），我可以为您定制更详细的行程建议！"
+      "text": " there anything specific you'd like to know about him or his work?"
     },
     {
       "type": "usage",
-      "input_tokens": 1893,
-      "output_tokens": 1015,
+      "input_tokens": 944,
+      "output_tokens": 306,
       "total_tokens": null,
       "cached_input_tokens": null,
       "cache_creation_input_tokens": null

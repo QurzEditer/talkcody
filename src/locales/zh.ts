@@ -1314,6 +1314,14 @@ const zh: LocaleDefinition = {
       emptyAudio: '录制的音频为空',
       noTranscriptionText: '未返回转录文本',
       transcriptionFailed: (message) => `转录失败：${message}`,
+      openaiOAuthNotSupported: `OpenAI OAuth (ChatGPT Plus/Pro) 不包含转录功能的 API 访问权限。
+
+要使用语音输入，您需要：
+1. 从 https://platform.openai.com/api-keys 获取 OpenAI API 密钥
+2. 添加支付方式并购买 API 积分
+3. 在设置 > OpenAI（API 密钥模式）中输入 API 密钥
+
+注意：ChatGPT Plus/Pro 订阅与 API 访问是分开的。`,
     },
   },
 

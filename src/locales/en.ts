@@ -1355,6 +1355,14 @@ const en: LocaleDefinition = {
       emptyAudio: 'Recorded audio is empty',
       noTranscriptionText: 'No transcription text returned',
       transcriptionFailed: (message) => `Transcription failed: ${message}`,
+      openaiOAuthNotSupported: `OpenAI OAuth (ChatGPT Plus/Pro) doesn't include API access for transcription.
+
+To use voice input, you need to:
+1. Get an OpenAI API key from https://platform.openai.com/api-keys
+2. Add a payment method and purchase API credits
+3. Enter the API key in Settings > OpenAI (API Key mode)
+
+Note: ChatGPT Plus/Pro subscription is separate from API access.`,
     },
   },
 

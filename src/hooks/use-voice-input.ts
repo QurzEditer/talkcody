@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { useTranslation } from '@/hooks/use-locale';
 import { logger } from '@/lib/logger';
+import { isOpenAIOAuthConnected } from '@/providers/oauth/openai-oauth-store';
 import { aiTranscriptionService } from '@/services/ai/ai-transcription-service';
 import { ElevenLabsRealtimeService } from '@/services/elevenlabs-realtime-service';
 import { useSettingsStore } from '@/stores/settings-store';
@@ -269,6 +270,23 @@ export function useVoiceInput() {
       return;
     }
 
+    // Check if using OpenAI transcription model
+    // If using OpenAI OAuth without API key, show error early
+    // Note: Only check for OpenAI's whisper-1, not Groq's whisper-large-v3-* models
+    if (model_type_transcription?.includes('@openai') || model_type_transcription === 'whisper-1') {
+      const openaiApiKey = getProviderApiKey('openai');
+      if (!openaiApiKey) {
+        const isOAuth = await isOpenAIOAuthConnected();
+        if (isOAuth) {
+          const errorMessage = t.VoiceInput.errors.openaiOAuthNotSupported;
+          setState((prev) => ({ ...prev, error: errorMessage }));
+          toast.error(errorMessage);
+          logger.error('[VoiceInput] OpenAI OAuth mode does not support transcription');
+          return;
+        }
+      }
+    }
+
     // Original MediaRecorder implementation for Whisper
     try {
       logger.info('Starting recording...');
@@ -341,7 +359,7 @@ export function useVoiceInput() {
       toast.error(errorMessage);
       logger.error('Recording start error:', error);
     }
-  }, [model_type_transcription, startRealtimeRecording, t]);
+  }, [model_type_transcription, startRealtimeRecording, t, getProviderApiKey]);
 
   const stopRecording = useCallback((): Promise<string> => {
     // Check if using real-time transcription

@@ -54,7 +54,7 @@ describe('AITranscriptionService - Groq', () => {
 
     expect(llmClient.transcribeAudio).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: 'whisper-large-v3-turbo',
+        model: 'whisper-large-v3-turbo@groq',
         mimeType: 'audio/webm',
         responseFormat: 'verbose_json',
       })

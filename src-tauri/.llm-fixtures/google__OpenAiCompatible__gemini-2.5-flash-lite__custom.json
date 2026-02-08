@@ -14,7 +14,7 @@
     "body": {
       "messages": [
         {
-          "content": "You are an AI assistant that generates concise, descriptive titles for tasks.\n\nUser's message: \"Remote task\"\n\nGenerate a short, clear title (5-10 words) that captures the essence of what the user is asking or discussing.\n\nGuidelines:\n1. Keep it concise (5-10 words maximum)\n2. Use title case (capitalize first letter of main words)\n3. Be specific and descriptive\n4. Avoid generic titles like \"New Chat\" or \"Question\"\n5. Focus on the main topic or intent\n\nExamples:\n- \"Fix Login Bug\"\n- \"Create User Dashboard\"\n- \"Explain React Hooks\"\n- \"Database Schema Design\"\n- \"API Rate Limiting Issue\"\n\nGenerate the title in English.\n\nProvide ONLY the title without any quotes, explanations, or additional formatting.",
+          "content": "You are an AI assistant that generates concise, descriptive titles for tasks.\n\nUser's message: \"Who is Kang Kai Sen? Kang Kai Sen.\"\n\nGenerate a short, clear title (5-10 words) that captures the essence of what the user is asking or discussing.\n\nGuidelines:\n1. Keep it concise (5-10 words maximum)\n2. Use title case (capitalize first letter of main words)\n3. Be specific and descriptive\n4. Avoid generic titles like \"New Chat\" or \"Question\"\n5. Focus on the main topic or intent\n\nExamples:\n- \"Fix Login Bug\"\n- \"Create User Dashboard\"\n- \"Explain React Hooks\"\n- \"Database Schema Design\"\n- \"API Rate Limiting Issue\"\n\nGenerate the title in English.\n\nProvide ONLY the title without any quotes, explanations, or additional formatting.",
           "role": "user"
         }
       ],
@@ -29,30 +29,26 @@
     "type": "stream",
     "status": 200,
     "headers": {
-      "x-xss-protection": "0",
-      "set-cookie": "NID=528=DzLVdha4B_MPqNMnJHGjckzmQtgLDxAKyGWUCSKYFu1NUu3liJ_5ORg_j1vv2TS_DOK6rcdy3TGX1mWB3jT2wOHGuSpzNMQE38a23QwKmIfTcXFf9zP4OJAUq86ISGF9kePnQ6TjPyQzMahDCpbiOO2WF6mF0MZjlQ-M6nN2Hq9zJDCTkAlPOanyqtQ2Lw7lMXk0OIffhA; expires=Mon, 10-Aug-2026 03:35:33 GMT; path=/; domain=.generativelanguage.googleapis.com; HttpOnly",
-      "cache-control": "private",
-      "vary": "Origin,Accept-Encoding",
-      "expires": "Sun, 08 Feb 2026 03:35:33 GMT",
-      "x-content-type-options": "nosniff",
-      "server": "scaffolding on HTTPServer2",
       "transfer-encoding": "chunked",
-      "server-timing": "gfet4t7; dur=722",
+      "cache-control": "private",
+      "x-content-type-options": "nosniff",
+      "date": "Sun, 08 Feb 2026 04:58:18 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "expires": "Sun, 08 Feb 2026 04:58:18 GMT",
       "accept-ranges": "none",
-      "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
-      "content-type": "text/event-stream",
       "x-frame-options": "SAMEORIGIN",
-      "date": "Sun, 08 Feb 2026 03:35:33 GMT",
+      "server-timing": "gfet4t7; dur=479",
+      "content-type": "text/event-stream",
+      "vary": "Origin,Accept-Encoding",
+      "x-xss-protection": "0",
+      "set-cookie": "NID=528=iZIcf1LLkoXLoQk2YOSgeUmzgFlt-tVPam3OhV_gVYpRjDmRULAh4ZcYigWdqZJjMGSXCkHrYHDNa51hmxJ-ryHNNRpjVm4sAxPkJL6-JcMOTYKhavdDdi7_ZtL8xT9P6tn2RL8rF5vE127Q6FUjctgxqqS5aiznApZn5Miifz43Pz-oIxCeg4g0YJwzG5DkWcAaXIHGsw; expires=Mon, 10-Aug-2026 04:58:17 GMT; path=/; domain=.generativelanguage.googleapis.com; HttpOnly",
+      "p3p": "CP=\"This is not a P3P policy! See g.co/p3phelp for more info.\"",
       "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000"
     },
     "sse_events": [
       {
         "event": null,
-        "data": "{\"choices\":[{\"delta\":{\"content\":\"Remote Work\",\"role\":\"assistant\"},\"index\":0}],\"created\":1770521733,\"id\":\"hQSIaeaSMei9jMcPg_q3kAc\",\"model\":\"gemini-2.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":2,\"prompt_tokens\":177,\"total_tokens\":179}}"
-      },
-      {
-        "event": null,
-        "data": "{\"choices\":[{\"delta\":{\"content\":\" Task Management\",\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1770521733,\"id\":\"hQSIaeaSMei9jMcPg_q3kAc\",\"model\":\"gemini-2.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":4,\"prompt_tokens\":177,\"total_tokens\":181}}"
+        "data": "{\"choices\":[{\"delta\":{\"content\":\"Identify Kang Kai Sen\",\"role\":\"assistant\"},\"finish_reason\":\"stop\",\"index\":0}],\"created\":1770526698,\"id\":\"6heIaeu4D7CujrEPiZKswAY\",\"model\":\"gemini-2.5-flash-lite\",\"object\":\"chat.completion.chunk\",\"usage\":{\"completion_tokens\":4,\"prompt_tokens\":184,\"total_tokens\":188}}"
       },
       {
         "event": null,
@@ -65,7 +61,7 @@
     "messages": [
       {
         "role": "user",
-        "content": "You are an AI assistant that generates concise, descriptive titles for tasks.\n\nUser's message: \"Remote task\"\n\nGenerate a short, clear title (5-10 words) that captures the essence of what the user is asking or discussing.\n\nGuidelines:\n1. Keep it concise (5-10 words maximum)\n2. Use title case (capitalize first letter of main words)\n3. Be specific and descriptive\n4. Avoid generic titles like \"New Chat\" or \"Question\"\n5. Focus on the main topic or intent\n\nExamples:\n- \"Fix Login Bug\"\n- \"Create User Dashboard\"\n- \"Explain React Hooks\"\n- \"Database Schema Design\"\n- \"API Rate Limiting Issue\"\n\nGenerate the title in English.\n\nProvide ONLY the title without any quotes, explanations, or additional formatting.",
+        "content": "You are an AI assistant that generates concise, descriptive titles for tasks.\n\nUser's message: \"Who is Kang Kai Sen? Kang Kai Sen.\"\n\nGenerate a short, clear title (5-10 words) that captures the essence of what the user is asking or discussing.\n\nGuidelines:\n1. Keep it concise (5-10 words maximum)\n2. Use title case (capitalize first letter of main words)\n3. Be specific and descriptive\n4. Avoid generic titles like \"New Chat\" or \"Question\"\n5. Focus on the main topic or intent\n\nExamples:\n- \"Fix Login Bug\"\n- \"Create User Dashboard\"\n- \"Explain React Hooks\"\n- \"Database Schema Design\"\n- \"API Rate Limiting Issue\"\n\nGenerate the title in English.\n\nProvide ONLY the title without any quotes, explanations, or additional formatting.",
         "providerOptions": null
       }
     ],
@@ -80,9 +76,9 @@
   "expected_events": [
     {
       "type": "usage",
-      "input_tokens": 177,
-      "output_tokens": 2,
-      "total_tokens": 179,
+      "input_tokens": 184,
+      "output_tokens": 4,
+      "total_tokens": 188,
       "cached_input_tokens": null,
       "cache_creation_input_tokens": null
     },
@@ -91,19 +87,7 @@
     },
     {
       "type": "text-delta",
-      "text": "Remote Work"
-    },
-    {
-      "type": "usage",
-      "input_tokens": 177,
-      "output_tokens": 4,
-      "total_tokens": 181,
-      "cached_input_tokens": null,
-      "cache_creation_input_tokens": null
-    },
-    {
-      "type": "text-delta",
-      "text": " Task Management"
+      "text": "Identify Kang Kai Sen"
     },
     {
       "type": "done",

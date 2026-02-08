@@ -89,6 +89,21 @@ class AITranscriptionService {
         ) {
           throw error; // Pass through our custom error messages
         }
+
+        // Detect OpenAI OAuth permission issues
+        if (
+          error.message.includes('401') &&
+          (error.message.includes('insufficient permissions') ||
+            error.message.includes('Missing scopes') ||
+            error.message.includes('model.request'))
+        ) {
+          throw new Error(
+            `OpenAI OAuth (ChatGPT Plus/Pro) doesn't include API access for transcription. ` +
+              `To use voice input, you need an OpenAI API key with billing enabled. ` +
+              `Get one at https://platform.openai.com/api-keys`
+          );
+        }
+
         throw new Error(`Transcription failed: ${error.message}`);
       }
 

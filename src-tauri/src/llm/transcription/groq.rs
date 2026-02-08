@@ -61,9 +61,31 @@ impl GroqTranscriptionClient {
             .decode(request.audio_base64.as_bytes())
             .map_err(|e| format!("Invalid audio base64: {}", e))?;
 
+        // Extract the base MIME type (remove parameters like codecs=opus)
+        let base_mime_type = request
+            .mime_type
+            .split(';')
+            .next()
+            .unwrap_or(&request.mime_type)
+            .trim();
+
+        // Map MIME type to file extension for Groq's supported formats
+        let file_extension = match base_mime_type {
+            "audio/webm" => "webm",
+            "audio/flac" => "flac",
+            "audio/mp3" | "audio/mpeg" => "mp3",
+            "audio/mp4" | "audio/m4a" => "m4a",
+            "audio/ogg" => "ogg",
+            "audio/opus" => "opus",
+            "audio/wav" | "audio/wave" => "wav",
+            _ => "webm", // Default to webm as it's commonly used
+        };
+
+        let file_name = format!("audio.{}", file_extension);
+
         let file_part = Part::bytes(audio_bytes)
-            .file_name("audio")
-            .mime_str(&request.mime_type)
+            .file_name(file_name)
+            .mime_str(base_mime_type)
             .map_err(|e| format!("Invalid mime type: {}", e))?;
 
         let mut form = Form::new()

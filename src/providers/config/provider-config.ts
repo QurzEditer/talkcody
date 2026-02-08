@@ -28,6 +28,18 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
     supportsOAuth: true,
   },
 
+  moonshot: {
+    id: 'moonshot',
+    name: 'Moonshot',
+    apiKeyName: 'MOONSHOT_API_KEY',
+    required: false,
+    type: 'openai-compatible',
+    supportsCodingPlan: true,
+    codingPlanBaseUrl: 'https://api.kimi.com/coding/v1',
+    supportsInternational: true,
+    internationalBaseUrl: 'https://api.kimi.com/v1',
+  },
+
   MiniMax: {
     id: 'MiniMax',
     name: 'MiniMax',
@@ -48,17 +60,6 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
     type: 'openai-compatible',
     supportsCodingPlan: true,
     codingPlanBaseUrl: 'https://open.bigmodel.cn/api/coding/paas/v4',
-  },
-
-  zai: {
-    id: 'zai',
-    name: 'Z.AI',
-    apiKeyName: 'ZAI_API_KEY',
-    baseUrl: 'https://api.z.ai/api/paas/v4/',
-    required: false,
-    type: 'openai-compatible',
-    supportsCodingPlan: true,
-    codingPlanBaseUrl: 'https://api.z.ai/api/coding/paas/v4',
   },
 
   openRouter: {
@@ -94,13 +95,15 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
     type: 'custom',
   },
 
-  groq: {
-    id: 'groq',
-    name: 'Groq',
-    apiKeyName: 'GROQ_API_KEY',
-    baseUrl: 'https://api.groq.com/openai/v1',
+  zai: {
+    id: 'zai',
+    name: 'Z.AI',
+    apiKeyName: 'ZAI_API_KEY',
+    baseUrl: 'https://api.z.ai/api/paas/v4/',
     required: false,
     type: 'openai-compatible',
+    supportsCodingPlan: true,
+    codingPlanBaseUrl: 'https://api.z.ai/api/coding/paas/v4',
   },
 
   ollama: {
@@ -130,18 +133,6 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
     type: 'openai-compatible',
   },
 
-  moonshot: {
-    id: 'moonshot',
-    name: 'Moonshot',
-    apiKeyName: 'MOONSHOT_API_KEY',
-    required: false,
-    type: 'openai-compatible',
-    supportsCodingPlan: true,
-    codingPlanBaseUrl: 'https://api.kimi.com/coding/v1',
-    supportsInternational: true,
-    internationalBaseUrl: 'https://api.kimi.com/v1',
-  },
-
   tavily: {
     id: 'tavily',
     name: 'Tavily Web Search',
@@ -167,6 +158,15 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
     baseUrl: 'https://api.elevenlabs.io',
     required: false,
     type: 'custom',
+  },
+
+  groq: {
+    id: 'groq',
+    name: 'Groq',
+    apiKeyName: 'GROQ_API_KEY',
+    baseUrl: 'https://api.groq.com/openai/v1',
+    required: false,
+    type: 'openai-compatible',
   },
 } as const;
 
