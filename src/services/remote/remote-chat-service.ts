@@ -35,7 +35,6 @@ import type { TaskSettings } from '@/types/task';
 const STREAM_THROTTLE_MS = 1000;
 const TELEGRAM_STREAM_EDIT_LIMIT = 3800;
 const TELEGRAM_DEDUP_TTL_MS = 5 * 60 * 1000;
-const FEISHU_STREAM_EDIT_LIMIT = 3600;
 
 interface ChatSessionState {
   channelId: RemoteInboundMessage['channelId'];
@@ -49,6 +48,7 @@ interface ChatSessionState {
   lastStatusAck?: ExecutionStatus | 'accepted';
   streamMode?: 'edit' | 'append';
   lastDeliveredContent?: string;
+  appendQueue?: Promise<void>;
 }
 
 interface PendingApprovalState {
@@ -649,6 +649,7 @@ class RemoteChatService {
     session.lastSentAt = 0;
     session.streamMode = undefined;
     session.lastDeliveredContent = undefined;
+    session.appendQueue = undefined;
 
     const newTaskId = await taskService.createTask(firstMessage || 'Remote task');
     session.taskId = newTaskId;
@@ -707,14 +708,25 @@ class RemoteChatService {
       .slice()
       .reverse()
       .find((m) => m.role === 'assistant');
-    const content = lastAssistantMessage?.content?.toString() || execution.streamingContent || '';
+    const taskContent =
+      typeof lastAssistantMessage?.content === 'string'
+        ? lastAssistantMessage.content
+        : (lastAssistantMessage?.content?.toString() ?? '');
+    const executionContent = execution.streamingContent ?? '';
+    const lastStreamContent = this.lastStreamContent.get(session.taskId) ?? '';
+    const content = [executionContent, taskContent, lastStreamContent].reduce((best, candidate) => {
+      return candidate.trim().length > best.trim().length ? candidate : best;
+    }, '');
     if (!content.trim()) {
       return;
     }
 
-    // In append mode, send only the remaining delta as new messages
-    if (session.streamMode === 'append') {
-      await this.flushAppendFinal(session, content, execution.status);
+    // For Feishu, always use append mode to avoid duplication issues
+    if (session.channelId === 'feishu') {
+      session.appendQueue = (session.appendQueue ?? Promise.resolve()).then(() =>
+        this.flushAppendFinal(session, content, execution.status)
+      );
+      await session.appendQueue;
       return;
     }
 
@@ -779,24 +791,24 @@ class RemoteChatService {
     status: ExecutionStatus
   ): Promise<void> {
     const lastDelivered = session.lastDeliveredContent ?? '';
-    const normalizedContent = content.trim();
-    const normalizedLast = lastDelivered.trim();
+    const nextContent = content;
 
     // Compute delta (remaining content)
-    let delta: string;
-    if (normalizedContent.startsWith(normalizedLast)) {
-      delta = normalizedContent.slice(normalizedLast.length).trim();
+    let delta = '';
+    if (!lastDelivered) {
+      delta = nextContent;
+    } else if (nextContent.startsWith(lastDelivered)) {
+      delta = nextContent.slice(lastDelivered.length);
     } else {
-      delta = normalizedContent;
+      delta = nextContent;
     }
 
-    // Send delta if any
     if (delta) {
       const limit = getRemoteMessageLimit(session.channelId);
       const chunks = this.splitByPreference(delta, limit);
 
       for (const chunk of chunks) {
-        if (!chunk.trim()) continue;
+        if (!chunk) continue;
         const message = await this.sendMessage(
           { channelId: session.channelId, chatId: session.chatId } as RemoteInboundMessage,
           chunk
@@ -808,7 +820,7 @@ class RemoteChatService {
       }
     }
 
-    session.lastDeliveredContent = normalizedContent;
+    session.lastDeliveredContent = nextContent;
 
     // Always send terminal status
     if (status !== 'running' && session.lastStatusAck !== status) {
@@ -872,19 +884,23 @@ class RemoteChatService {
 
     session.lastSentAt = now;
 
-    // In append mode (Feishu edit failed), send only the delta
-    if (session.streamMode === 'append') {
-      await this.sendAppendDelta(session, content);
+    // For Feishu, always use append mode to avoid duplication issues
+    // Feishu doesn't handle message editing well in streaming scenarios
+    if (session.channelId === 'feishu') {
+      session.appendQueue = (session.appendQueue ?? Promise.resolve()).then(() =>
+        this.sendAppendDelta(session, content)
+      );
+      await session.appendQueue;
       return;
     }
 
+    // For other channels (Telegram), use edit mode
     const chunks = splitRemoteText(content, session.channelId);
     if (chunks.length === 0) {
       return;
     }
 
-    const streamLimit =
-      session.channelId === 'feishu' ? FEISHU_STREAM_EDIT_LIMIT : TELEGRAM_STREAM_EDIT_LIMIT;
+    const streamLimit = TELEGRAM_STREAM_EDIT_LIMIT;
     const firstChunk = chunks[0] ?? '';
     const streamingChunk = firstChunk.slice(0, streamLimit).trim();
     if (!streamingChunk) {
@@ -892,18 +908,7 @@ class RemoteChatService {
     }
 
     if (session.streamingMessageId) {
-      // For Feishu, try edit but catch failure and switch to append mode
-      if (session.channelId === 'feishu') {
-        const editSuccess = await this.tryEditMessage(session, streamingChunk);
-        if (!editSuccess) {
-          // Switch to append mode and send delta
-          session.streamMode = 'append';
-          await this.sendAppendDelta(session, content);
-          return;
-        }
-      } else {
-        await this.editMessage(session, streamingChunk);
-      }
+      await this.editMessage(session, streamingChunk);
       session.sentChunks = [streamingChunk];
       session.lastDeliveredContent = streamingChunk;
       return;
@@ -946,19 +951,21 @@ class RemoteChatService {
    */
   private async sendAppendDelta(session: ChatSessionState, content: string): Promise<void> {
     const lastDelivered = session.lastDeliveredContent ?? '';
-    const normalizedContent = content.trim();
-    const normalizedLast = lastDelivered.trim();
+    const nextContent = content;
 
-    // If content doesn't start with last delivered, it might be a rewrite
-    // In this case, send the full content as a new message
-    let delta: string;
-    if (normalizedContent.startsWith(normalizedLast)) {
-      delta = normalizedContent.slice(normalizedLast.length).trim();
+    // Compute delta (remaining content)
+    let delta = '';
+    if (!lastDelivered) {
+      delta = nextContent;
+    } else if (nextContent.startsWith(lastDelivered)) {
+      delta = nextContent.slice(lastDelivered.length);
     } else {
-      delta = normalizedContent;
+      // Content rewrite; send full content again
+      delta = nextContent;
     }
 
     if (!delta) {
+      session.lastDeliveredContent = nextContent;
       return;
     }
 
@@ -967,7 +974,7 @@ class RemoteChatService {
     const chunks = this.splitByPreference(delta, limit);
 
     for (const chunk of chunks) {
-      if (!chunk.trim()) continue;
+      if (!chunk) continue;
       const message = await this.sendMessage(
         { channelId: session.channelId, chatId: session.chatId } as RemoteInboundMessage,
         chunk
@@ -978,8 +985,8 @@ class RemoteChatService {
       session.sentChunks.push(chunk);
     }
 
-    // Update last delivered content
-    session.lastDeliveredContent = normalizedContent;
+    // Update last delivered content to the full content we used for diff
+    session.lastDeliveredContent = nextContent;
   }
 
   /**

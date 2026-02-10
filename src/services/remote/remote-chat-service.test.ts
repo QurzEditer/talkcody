@@ -507,4 +507,433 @@ describe('remote-chat-service', () => {
       })
     );
   });
+
+  it('sends final complete answer from execution.streamingContent when task store has stale data', async () => {
+    vi.useFakeTimers();
+
+    // Simulate scenario where task store has stale content (tool call initial response)
+    // but execution.streamingContent has the final complete answer
+    const staleContent = '我来帮您查找关于康凯森的信息。\n';
+    const finalContent =
+      '我来帮您查找关于康凯森的信息。\n## Answer\n\n康凯森（Kaisen Kang）是一名**数据库工程师**。';
+
+    const session = {
+      channelId: 'telegram',
+      chatId: '1',
+      taskId: 'task-1',
+      lastSentAt: 0,
+      sentChunks: [staleContent], // Previously sent stale content during streaming
+      streamingMessageId: 'msg-1',
+      lastStatusAck: 'running',
+      lastStreamStatus: 'running',
+    };
+
+    // Mock execution with final complete content
+    const execution = {
+      taskId: 'task-1',
+      status: 'completed',
+      streamingContent: finalContent,
+    };
+
+    mocks.useExecutionStore.getState.mockReturnValue({
+      getExecution: vi.fn().mockReturnValue(execution),
+    });
+
+    // Mock task store with stale content (simulating race condition)
+    mocks.useTaskStore.getState.mockReturnValue({
+      getMessages: vi.fn().mockReturnValue([
+        {
+          id: 'msg-1',
+          role: 'assistant',
+          content: staleContent, // Stale content in task store
+        },
+      ]),
+    });
+
+    // @ts-expect-error - test setup
+    remoteChatService.sessions.set('telegram:1', session);
+
+    await remoteChatService.start();
+
+    // Trigger the execution listener (simulating status change to completed)
+    await mocks.executionListener();
+    vi.advanceTimersByTime(1100);
+    await Promise.resolve();
+
+    // Should send the final complete content, not the stale content
+    expect(mocks.editMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channelId: 'telegram',
+        chatId: '1',
+        messageId: 'msg-1',
+        text: expect.stringContaining('康凯森（Kaisen Kang）'),
+      })
+    );
+
+    vi.useRealTimers();
+  });
+
+  it('sends final answer after tool call when content was partially streamed', async () => {
+    vi.useFakeTimers();
+
+    // Simulate tool call scenario:
+    // 1. Initial streaming: "我来帮您查找..."
+    // 2. Tool call happens
+    // 3. Final answer generated with complete information
+    const initialStreamingContent = '我来帮您查找关于康凯森的信息。\n';
+    const finalCompleteContent = `我来帮您查找关于康凯森的信息。
+## Answer
+
+康凯森（Kaisen Kang）是一名**数据库工程师**，专注于OLAP数据库查询引擎领域。
+
+## Supporting Details
+
+**基本信息：**
+- 毕业于西安电子科技大学
+- 目前在 CelerData 工作
+
+**技术成就：**
+- StarRocks 核心开发者
+- 个人网站：https://kangkaisen.com/`;
+
+    const session = {
+      channelId: 'telegram',
+      chatId: '1',
+      taskId: 'task-tool-call',
+      lastSentAt: Date.now(),
+      sentChunks: [initialStreamingContent],
+      streamingMessageId: 'msg-tool-1',
+      lastStatusAck: 'running',
+      lastStreamStatus: 'running',
+      lastDeliveredContent: initialStreamingContent,
+    };
+
+    // Execution completed with full content
+    const execution = {
+      taskId: 'task-tool-call',
+      status: 'completed',
+      streamingContent: finalCompleteContent,
+    };
+
+    mocks.useExecutionStore.getState.mockReturnValue({
+      getExecution: vi.fn().mockReturnValue(execution),
+    });
+
+    // @ts-expect-error - test setup
+    remoteChatService.sessions.set('telegram:1', session);
+
+    await remoteChatService.start();
+
+    // Trigger completion
+    await mocks.executionListener();
+    vi.advanceTimersByTime(1100);
+    await Promise.resolve();
+
+    // Verify editMessage is called with content containing final answer details
+    const editCalls = mocks.editMessage.mock.calls;
+    expect(editCalls.length).toBeGreaterThan(0);
+
+    // Check that the edit contains the final answer content
+    const lastEditCall = editCalls[editCalls.length - 1];
+    expect(lastEditCall[0]).toMatchObject({
+      channelId: 'telegram',
+      chatId: '1',
+      messageId: 'msg-tool-1',
+    });
+    expect(lastEditCall[0].text).toContain('StarRocks');
+    expect(lastEditCall[0].text).toContain('CelerData');
+
+    // Verify additional chunks are sent as new messages if content is long
+    expect(mocks.sendMessage).toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  it('does not skip sending final content when alreadySent differs from execution content', async () => {
+    vi.useFakeTimers();
+
+    const streamingChunk = '我来帮您查找关于康凯森的信息。\n'.slice(0, 100);
+    const finalContent =
+      '我来帮您查找关于康凯森的信息。\n## Answer\n\n完整答案内容...';
+
+    const session = {
+      channelId: 'telegram',
+      chatId: '1',
+      taskId: 'task-2',
+      lastSentAt: 0,
+      sentChunks: [streamingChunk], // Truncated content sent during streaming
+      streamingMessageId: 'msg-2',
+      lastStatusAck: 'running',
+      lastStreamStatus: 'running',
+      lastDeliveredContent: streamingChunk,
+    };
+
+    const execution = {
+      taskId: 'task-2',
+      status: 'completed',
+      streamingContent: finalContent,
+    };
+
+    mocks.useExecutionStore.getState.mockReturnValue({
+      getExecution: vi.fn().mockReturnValue(execution),
+    });
+
+    // @ts-expect-error - test setup
+    remoteChatService.sessions.set('telegram:1', session);
+
+    await remoteChatService.start();
+
+    await mocks.executionListener();
+    vi.advanceTimersByTime(1100);
+    await Promise.resolve();
+
+    // Should not return early - should send the final content
+    expect(mocks.editMessage).toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+
+  // Feishu-specific tests for append mode streaming
+  describe('Feishu streaming append mode', () => {
+    it('always uses append mode for Feishu streaming (never edits)', async () => {
+      vi.useFakeTimers();
+
+      const session = {
+        channelId: 'feishu',
+        chatId: 'user1',
+        taskId: 'task-feishu-1',
+        lastSentAt: 0,
+        sentChunks: [],
+        streamingMessageId: 'msg-1',
+        lastStatusAck: 'running',
+      };
+
+      const execution = {
+        taskId: 'task-feishu-1',
+        status: 'running',
+        streamingContent: 'Hello world',
+      };
+
+      mocks.useExecutionStore.getState.mockReturnValue({
+        getExecution: vi.fn().mockReturnValue(execution),
+      });
+
+      // @ts-expect-error - test setup
+      remoteChatService.sessions.set('feishu:user1', session);
+
+      await remoteChatService.start();
+
+      // Trigger streaming update
+      await mocks.executionListener();
+      vi.advanceTimersByTime(1100);
+      await Promise.resolve();
+
+      // Should NOT call editMessage for Feishu
+      expect(mocks.editMessage).not.toHaveBeenCalled();
+
+      // Should call sendMessage instead
+      expect(mocks.sendMessage).toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('sends only delta in Feishu append mode, not full content', async () => {
+      vi.useFakeTimers();
+
+      const session = {
+        channelId: 'feishu',
+        chatId: 'user1',
+        taskId: 'task-feishu-2',
+        lastSentAt: 0,
+        sentChunks: ['Hello'],
+        streamingMessageId: 'msg-2',
+        lastStatusAck: 'running',
+        lastDeliveredContent: 'Hello',
+      };
+
+      // Content that extends previous content
+      const execution = {
+        taskId: 'task-feishu-2',
+        status: 'running',
+        streamingContent: 'Hello world this is new',
+      };
+
+      mocks.useExecutionStore.getState.mockReturnValue({
+        getExecution: vi.fn().mockReturnValue(execution),
+      });
+
+      // @ts-expect-error - test setup
+      remoteChatService.sessions.set('feishu:user1', session);
+
+      // Clear previous calls
+      mocks.sendMessage.mockClear();
+
+      await remoteChatService.start();
+
+      // Trigger streaming update
+      await mocks.executionListener();
+      vi.advanceTimersByTime(1100);
+      await Promise.resolve();
+
+      // Get all sent messages
+      const sentTexts = mocks.sendMessage.mock.calls.map((call) => call[0].text);
+      const allSentText = sentTexts.join('');
+
+      // Should NOT contain duplicated "HelloHello"
+      expect(allSentText).not.toContain('HelloHello');
+
+      // Should contain "world" (the delta part)
+      expect(allSentText).toContain('world');
+
+      vi.useRealTimers();
+    });
+
+    it('flushes final content in Feishu append mode without editing', async () => {
+      vi.useFakeTimers();
+
+      const session = {
+        channelId: 'feishu',
+        chatId: 'user1',
+        taskId: 'task-feishu-3',
+        lastSentAt: 0,
+        sentChunks: ['Processing...'],
+        streamingMessageId: 'msg-3',
+        lastStatusAck: 'running',
+        lastStreamStatus: 'running',
+        lastDeliveredContent: 'Processing...',
+      };
+
+      const execution = {
+        taskId: 'task-feishu-3',
+        status: 'completed',
+        streamingContent: 'Final answer is here with complete information',
+      };
+
+      mocks.useExecutionStore.getState.mockReturnValue({
+        getExecution: vi.fn().mockReturnValue(execution),
+      });
+
+      // @ts-expect-error - test setup
+      remoteChatService.sessions.set('feishu:user1', session);
+
+      // Clear previous calls
+      mocks.sendMessage.mockClear();
+      mocks.editMessage.mockClear();
+
+      await remoteChatService.start();
+
+      // Trigger completion
+      await mocks.executionListener();
+      vi.advanceTimersByTime(1100);
+      await Promise.resolve();
+
+      // Should NOT call editMessage for Feishu
+      expect(mocks.editMessage).not.toHaveBeenCalled();
+
+      // Should send the remaining delta via sendMessage
+      expect(mocks.sendMessage).toHaveBeenCalled();
+
+      // Get all sent texts
+      const sentTexts = mocks.sendMessage.mock.calls.map((call) => call[0].text);
+      const allSentText = sentTexts.join('');
+
+      // Should contain "Final answer" but not duplicated "Processing"
+      expect(allSentText).toContain('Final answer');
+      expect(allSentText).not.toContain('Processing...Processing');
+
+      vi.useRealTimers();
+    });
+
+    it('handles content reset in Feishu when new content does not start with last delivered', async () => {
+      vi.useFakeTimers();
+
+      const session = {
+        channelId: 'feishu',
+        chatId: 'user1',
+        taskId: 'task-feishu-4',
+        lastSentAt: 0,
+        sentChunks: ['Old content'],
+        streamingMessageId: 'msg-4',
+        lastStatusAck: 'running',
+        lastDeliveredContent: 'Old content',
+      };
+
+      // New content that does NOT start with last delivered (complete rewrite)
+      const execution = {
+        taskId: 'task-feishu-4',
+        status: 'running',
+        streamingContent: 'Completely new rewritten content',
+      };
+
+      mocks.useExecutionStore.getState.mockReturnValue({
+        getExecution: vi.fn().mockReturnValue(execution),
+      });
+
+      // @ts-expect-error - test setup
+      remoteChatService.sessions.set('feishu:user1', session);
+
+      // Clear previous calls
+      mocks.sendMessage.mockClear();
+
+      await remoteChatService.start();
+
+      // Trigger streaming update
+      await mocks.executionListener();
+      vi.advanceTimersByTime(1100);
+      await Promise.resolve();
+
+      // Get all sent texts
+      const sentTexts = mocks.sendMessage.mock.calls.map((call) => call[0].text);
+      const allSentText = sentTexts.join('');
+
+      // Should send the full new content (since it's a rewrite)
+      expect(allSentText).toContain('Completely new rewritten content');
+
+      vi.useRealTimers();
+    });
+
+    it('does not send empty delta in Feishu when content unchanged', async () => {
+      vi.useFakeTimers();
+
+      const session = {
+        channelId: 'feishu',
+        chatId: 'user1',
+        taskId: 'task-feishu-5',
+        lastSentAt: 0,
+        sentChunks: ['Same content'],
+        streamingMessageId: 'msg-5',
+        lastStatusAck: 'running',
+        lastDeliveredContent: 'Same content',
+      };
+
+      // Same content as last delivered
+      const execution = {
+        taskId: 'task-feishu-5',
+        status: 'running',
+        streamingContent: 'Same content',
+      };
+
+      mocks.useExecutionStore.getState.mockReturnValue({
+        getExecution: vi.fn().mockReturnValue(execution),
+      });
+
+      // @ts-expect-error - test setup
+      remoteChatService.sessions.set('feishu:user1', session);
+
+      // Clear previous calls
+      mocks.sendMessage.mockClear();
+
+      await remoteChatService.start();
+
+      // Trigger streaming update
+      await mocks.executionListener();
+      vi.advanceTimersByTime(1100);
+      await Promise.resolve();
+
+      // Should NOT send any message since delta is empty
+      expect(mocks.sendMessage).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+  });
 });

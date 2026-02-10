@@ -1,8 +1,3 @@
-/**
- * Centralized documentation links configuration
- * All external documentation URLs should be defined here for easy management
- */
-
 import { settingsManager } from '@/stores/settings-store';
 
 function getBaseUrl(): string {
@@ -51,6 +46,7 @@ export function getDocLinks() {
       anthropic: `${BASE_URL}/configuration/api-keys#anthropic`,
       github_copilot: `${BASE_URL}/features/github-copilot`,
       google: `${BASE_URL}/configuration/api-keys#google-ai`,
+      groq: `${BASE_URL}/configuration/api-keys#groq`,
       deepseek: `${BASE_URL}/configuration/api-keys#deepseek`,
       ollama: `${BASE_URL}/configuration/api-keys#ollama`,
       lmstudio: `${BASE_URL}/configuration/api-keys#lm-studio`,
@@ -58,7 +54,7 @@ export function getDocLinks() {
       elevenlabs: `${BASE_URL}/configuration/api-keys#eleven-labs`,
       moonshot: `${BASE_URL}/configuration/api-keys#moonshot`,
       serper: `${BASE_URL}/configuration/api-keys#serper`,
-      zai: `${BASE_URL}/configuration/api-keys#zai`,
+      zai: `${BASE_URL}/configuration/api-keys#z-ai`,
     },
 
     // Introduction

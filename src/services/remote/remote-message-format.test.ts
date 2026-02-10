@@ -55,11 +55,10 @@ describe('remote-message-format', () => {
     it('converts bullet lists', () => {
       const input = '- Item 1\n- Item 2\n- Item 3';
       const result = formatForTelegramHtml(input);
-      expect(result).toContain('<ul>');
-      expect(result).toContain('<li>Item 1</li>');
-      expect(result).toContain('<li>Item 2</li>');
-      expect(result).toContain('<li>Item 3</li>');
-      expect(result).toContain('</ul>');
+      expect(result).toContain('- Item 1');
+      expect(result).toContain('- Item 2');
+      expect(result).toContain('- Item 3');
+      expect(result).toContain('<br>');
     });
 
     it('converts newlines to br tags', () => {

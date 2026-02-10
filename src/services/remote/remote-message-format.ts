@@ -20,7 +20,12 @@ const DEFAULT_OPTIONS: FormatOptions = {
  * Escapes HTML special characters to prevent injection
  */
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"');
+  return text
+    .replace(/&/g, '&')
+    .replace(/</g, '<')
+    .replace(/>/g, '>')
+    .replace(/"/g, '"')
+    .replace(/'/g, "'");
 }
 
 /**
@@ -34,7 +39,7 @@ function convertInlineMarkdown(text: string): string {
   // ```language\ncode\n```
   result = result.replace(
     /```(\w+)?\n([\s\S]*?)```/g,
-    (_, lang, code) => `<pre><code>${escapeHtml(code.trim())}</code></pre>`
+    (_match, _lang, code) => `<pre><code>${code.trim()}</code></pre>`
   );
 
   // Inline code: `code`
@@ -65,32 +70,15 @@ function convertInlineMarkdown(text: string): string {
  */
 function convertLists(text: string): string {
   const lines = text.split('\n');
-  const result: string[] = [];
-  let inList = false;
-
-  for (const line of lines) {
-    const bulletMatch = line.match(/^(\s*)[-*]\s+(.+)$/);
-    if (bulletMatch && bulletMatch[2]) {
-      if (!inList) {
-        result.push('<ul>');
-        inList = true;
+  return lines
+    .map((line) => {
+      const bulletMatch = line.match(/^\s*[-*]\s+(.+)$/);
+      if (!bulletMatch?.[1]) {
+        return line;
       }
-      const content = convertInlineMarkdown(bulletMatch[2] ?? '');
-      result.push(`<li>${content}</li>`);
-    } else {
-      if (inList) {
-        result.push('</ul>');
-        inList = false;
-      }
-      result.push(line);
-    }
-  }
-
-  if (inList) {
-    result.push('</ul>');
-  }
-
-  return result.join('\n');
+      return `- ${bulletMatch[1]}`;
+    })
+    .join('\n');
 }
 
 /**
@@ -125,6 +113,9 @@ export function formatForTelegramHtml(text: string, options?: FormatOptions): st
   }
 
   let result = text;
+
+  // Escape user-provided content before applying markdown conversions
+  result = escapeHtml(result);
 
   // Convert headings first (before inline markdown)
   result = convertHeadings(result);
@@ -194,9 +185,6 @@ export function formatForPlainText(text: string): string {
   return result.trim();
 }
 
-/**
- * Gets the appropriate formatter based on channel
- */
 export function getMessageFormatter(channelId: RemoteChannelId): {
   format: (text: string) => string;
   parseMode: MessageParseMode;
