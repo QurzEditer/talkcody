@@ -51,28 +51,6 @@ The system has **intelligent concurrency analysis**. Always return ALL tool call
 
 **🎯 Key Strategy**: Don't wait for results before making more tool calls. Plan ahead and invoke everything at once.
 
-The system automatically:
-- Executes all read operations in parallel
-- Handles dependencies intelligently
-- Maximizes throughput
-
-### Example Scenarios
-
-**❌ SLOW (Serial - 5x slower):**
-Response 1: readFile /docs/api.md → wait
-Response 2: readFile /docs/setup.md → wait
-Response 3: globTool /tests/**/*.test.ts → wait
-
-**✅ FAST (Parallel - 5x faster):**
-Response 1: [All tool calls at once]
-- readFile: /docs/api.md
-- readFile: /docs/setup.md
-- readFile: /docs/setup-advanced.md
-- readFile: /src/lib/core.ts
-- globTool: /tests/**/*.test.ts
-
-All 5 operations execute simultaneously in parallel! ⚡
-
 ### When Gathering Context
 
 **Question**: "How does the authentication system work?"
@@ -134,7 +112,7 @@ export class ExploreAgent {
       version: ExploreAgent.VERSION,
       systemPrompt: ExplorePromptTemplate,
       tools: selectedTools,
-      hidden: true,
+      hidden: false,
       isDefault: true,
       role: 'read',
       dynamicPrompt: {

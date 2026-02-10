@@ -33,7 +33,6 @@ import type {
   StreamEvent as LlmStreamEvent,
   Message as ModelMessage,
 } from '@/services/llm/types';
-import { messageService } from '@/services/message-service';
 import { getEffectiveWorkspaceRoot } from '@/services/workspace-root-service';
 import { useSettingsStore } from '@/stores/settings-store';
 import { useTaskStore } from '@/stores/task-store';
