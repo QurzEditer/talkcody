@@ -35,11 +35,11 @@ export interface ShareToolContent {
  */
 export interface ShareAttachment {
   id: string;
-  type: 'image' | 'file' | 'code';
+  type: 'image' | 'video' | 'file' | 'code';
   filename: string;
   mimeType: string;
   size: number;
-  url?: string; // R2 storage URL for images
+  url?: string; // R2 storage URL for images/videos
   preview?: string; // Base64 preview for small images
 }
 

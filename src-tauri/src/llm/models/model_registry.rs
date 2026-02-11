@@ -119,6 +119,7 @@ impl ModelRegistry {
                                     image_input: model_cfg.image_input,
                                     image_output: model_cfg.image_output,
                                     audio_input: model_cfg.audio_input,
+                                    video_input: model_cfg.video_input,
                                     input_pricing: model_cfg
                                         .pricing
                                         .as_ref()
@@ -148,6 +149,7 @@ impl ModelRegistry {
                                     image_input: model_cfg.image_input,
                                     image_output: model_cfg.image_output,
                                     audio_input: model_cfg.audio_input,
+                                    video_input: model_cfg.video_input,
                                     input_pricing: model_cfg
                                         .pricing
                                         .as_ref()

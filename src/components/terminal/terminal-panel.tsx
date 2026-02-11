@@ -24,6 +24,7 @@ export function TerminalPanel({
 }: TerminalPanelProps) {
   const activeSessionId = useTerminalStore((state) => state.activeSessionId);
   const sessions = useTerminalStore((state) => state.sessions);
+  const autoCreateAllowed = useTerminalStore((state) => state.autoCreateAllowed);
   const rootPath = useRepositoryStore((state) => state.rootPath);
   const isCreatingTerminal = useRef(false);
 
@@ -35,10 +36,11 @@ export function TerminalPanel({
 
   useEffect(() => {
     // Create initial terminal if none exist
-    if (sessions.size === 0 && !isCreatingTerminal.current) {
+    if (sessions.size === 0 && autoCreateAllowed && !isCreatingTerminal.current) {
       logger.info('Creating initial terminal', {
         sessionsSize: sessions.size,
         rootPath,
+        autoCreateAllowed,
         isCreating: isCreatingTerminal.current,
       });
       isCreatingTerminal.current = true;
@@ -51,7 +53,7 @@ export function TerminalPanel({
           isCreatingTerminal.current = false;
         });
     }
-  }, [sessions.size, rootPath]);
+  }, [sessions.size, rootPath, autoCreateAllowed]);
 
   // const handleCopyToChat = () => {
   //   if (!activeSessionId) {

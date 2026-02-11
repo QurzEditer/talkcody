@@ -88,6 +88,9 @@ impl ClaudeProtocol {
                             }));
                         }
                         ContentPart::ToolResult { .. } => {}
+                        ContentPart::Video { .. } => {
+                            // Claude protocol doesn't support video input, skip
+                        }
                         ContentPart::Reasoning {
                             text,
                             provider_options,

@@ -63,6 +63,22 @@ class FileUploadService {
     r: 'text/x-r',
   };
 
+  private readonly VIDEO_MIME_TYPES: Record<string, string> = {
+    mp4: 'video/mp4',
+    mov: 'video/quicktime',
+    webm: 'video/webm',
+    mkv: 'video/x-matroska',
+    avi: 'video/x-msvideo',
+    flv: 'video/x-flv',
+    wmv: 'video/x-ms-wmv',
+    '3gp': 'video/3gpp',
+    m4v: 'video/x-m4v',
+    ogv: 'video/ogg',
+  };
+
+  // Max video file size: 100MB
+  private readonly MAX_VIDEO_SIZE = 100 * 1024 * 1024;
+
   /**
    * Get MIME type from file extension
    */
@@ -89,6 +105,44 @@ class FileUploadService {
   private isImageFile(filePath: string): boolean {
     const extension = filePath.split('.').pop()?.toLowerCase();
     return extension ? extension in this.IMAGE_MIME_TYPES : false;
+  }
+
+  /**
+   * Check if file is a video based on extension
+   */
+  private isVideoFile(filePath: string): boolean {
+    const extension = filePath.split('.').pop()?.toLowerCase();
+    return extension ? extension in this.VIDEO_MIME_TYPES : false;
+  }
+
+  /**
+   * Get video MIME type from file extension
+   */
+  private getVideoMimeType(filePath: string): string {
+    const extension = filePath.split('.').pop()?.toLowerCase();
+    return extension ? this.VIDEO_MIME_TYPES[extension] || 'video/mp4' : 'video/mp4';
+  }
+
+  /**
+   * Validate video file (size and format)
+   */
+  private validateVideoFile(filePath: string, size: number): { valid: boolean; error?: string } {
+    if (size > this.MAX_VIDEO_SIZE) {
+      return {
+        valid: false,
+        error: `Video file exceeds maximum size of 100MB (${(size / (1024 * 1024)).toFixed(1)}MB)`,
+      };
+    }
+
+    if (!this.isVideoFile(filePath)) {
+      const extension = filePath.split('.').pop()?.toLowerCase() || 'unknown';
+      return {
+        valid: false,
+        error: `Unsupported video format: ${extension}. Supported formats: ${Object.keys(this.VIDEO_MIME_TYPES).join(', ')}`,
+      };
+    }
+
+    return { valid: true };
   }
 
   // ============================================================================
@@ -304,6 +358,115 @@ class FileUploadService {
   }
 
   // ============================================================================
+  // Video Uploads
+  // ============================================================================
+
+  /**
+   * Open dialog and upload selected video files
+   */
+  async uploadVideosFromDialog(): Promise<MessageAttachment[]> {
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [
+          {
+            name: 'Videos',
+            extensions: Object.keys(this.VIDEO_MIME_TYPES),
+          },
+        ],
+      });
+
+      if (!selected) {
+        return [];
+      }
+
+      const filePaths = Array.isArray(selected) ? selected : [selected];
+      const attachments: MessageAttachment[] = [];
+
+      for (const filePath of filePaths) {
+        const filename = this.extractFilename(filePath);
+        logger.info('Processing video from dialog:', filename);
+
+        const copiedFilePath = await fileService.copyFileToAttachments(filePath, filename);
+        const size = await fileService.getFileSize(copiedFilePath);
+
+        // Validate video file
+        const validation = this.validateVideoFile(filePath, size);
+        if (!validation.valid) {
+          logger.error('Video validation failed:', validation.error);
+          throw new Error(validation.error);
+        }
+
+        const mimeType = this.getVideoMimeType(filename);
+
+        attachments.push({
+          id: generateId(),
+          type: 'video',
+          filename,
+          content: undefined, // Video content loaded on demand
+          filePath: copiedFilePath,
+          mimeType,
+          size,
+        });
+
+        logger.info('Video from dialog processed:', filename);
+      }
+
+      return attachments;
+    } catch (error) {
+      logger.error('Failed to upload videos from dialog:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload videos from file paths (used by drag-and-drop)
+   */
+  async uploadVideosFromPaths(filePaths: string[]): Promise<MessageAttachment[]> {
+    const attachments: MessageAttachment[] = [];
+
+    for (const filePath of filePaths) {
+      if (!this.isVideoFile(filePath)) {
+        logger.info('Skipping non-video file:', filePath);
+        continue;
+      }
+
+      try {
+        const filename = this.extractFilename(filePath);
+        logger.info('Processing dropped video:', filename);
+
+        const copiedFilePath = await fileService.copyFileToAttachments(filePath, filename);
+        const size = await fileService.getFileSize(copiedFilePath);
+
+        // Validate video file
+        const validation = this.validateVideoFile(filePath, size);
+        if (!validation.valid) {
+          logger.error('Video validation failed:', validation.error);
+          continue;
+        }
+
+        const mimeType = this.getVideoMimeType(filename);
+
+        attachments.push({
+          id: generateId(),
+          type: 'video',
+          filename,
+          content: undefined, // Video content loaded on demand
+          filePath: copiedFilePath,
+          mimeType,
+          size,
+        });
+
+        logger.info('✅ Drag-drop video uploaded:', filename);
+      } catch (error) {
+        logger.error('Failed to process dropped video:', filePath, error);
+      }
+    }
+
+    return attachments;
+  }
+
+  // ============================================================================
   // Clipboard Paste Handler (3-tier fallback)
   // ============================================================================
 
@@ -410,37 +573,78 @@ class FileUploadService {
   // ============================================================================
 
   /**
-   * Upload images from file paths (used by drag-and-drop)
+   * Upload files from file paths (used by drag-and-drop)
+   * Supports both images and videos
    */
-  async uploadImagesFromPaths(filePaths: string[]): Promise<MessageAttachment[]> {
+  async uploadFilesFromPaths(filePaths: string[]): Promise<MessageAttachment[]> {
     const attachments: MessageAttachment[] = [];
 
     for (const filePath of filePaths) {
-      if (!this.isImageFile(filePath)) {
-        logger.info('Skipping non-image file:', filePath);
-        continue;
-      }
-
       try {
         const fileName = this.extractFilename(filePath);
-        logger.info('Processing dropped file:', fileName);
 
-        const fileData = await readFile(filePath);
-        const mimeType = this.getMimeType(filePath);
+        // Handle images
+        if (this.isImageFile(filePath)) {
+          logger.info('Processing dropped image:', fileName);
 
-        const blob = new Blob([fileData], { type: mimeType });
-        const attachment = await this.uploadFromBlob(blob);
+          const fileData = await readFile(filePath);
+          const mimeType = this.getMimeType(filePath);
 
-        if (attachment) {
-          logger.info('✅ Drag-drop file uploaded:', fileName);
-          attachments.push(attachment);
+          const blob = new Blob([fileData], { type: mimeType });
+          const attachment = await this.uploadFromBlob(blob);
+
+          if (attachment) {
+            logger.info('✅ Drag-drop image uploaded:', fileName);
+            attachments.push(attachment);
+          }
+          continue;
         }
+
+        // Handle videos
+        if (this.isVideoFile(filePath)) {
+          logger.info('Processing dropped video:', fileName);
+
+          const copiedFilePath = await fileService.copyFileToAttachments(filePath, fileName);
+          const size = await fileService.getFileSize(copiedFilePath);
+
+          // Validate video file
+          const validation = this.validateVideoFile(filePath, size);
+          if (!validation.valid) {
+            logger.error('Video validation failed:', validation.error);
+            continue;
+          }
+
+          const mimeType = this.getVideoMimeType(fileName);
+
+          attachments.push({
+            id: generateId(),
+            type: 'video',
+            filename: fileName,
+            content: undefined, // Video content loaded on demand
+            filePath: copiedFilePath,
+            mimeType,
+            size,
+          });
+
+          logger.info('✅ Drag-drop video uploaded:', fileName);
+          continue;
+        }
+
+        logger.info('Skipping unsupported file:', filePath);
       } catch (error) {
         logger.error('Failed to process dropped file:', filePath, error);
       }
     }
 
     return attachments;
+  }
+
+  /**
+   * Upload images from file paths (used by drag-and-drop)
+   * @deprecated Use uploadFilesFromPaths instead
+   */
+  async uploadImagesFromPaths(filePaths: string[]): Promise<MessageAttachment[]> {
+    return this.uploadFilesFromPaths(filePaths);
   }
 }
 

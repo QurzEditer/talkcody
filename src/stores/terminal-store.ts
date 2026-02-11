@@ -17,6 +17,7 @@ interface TerminalState {
   sessions: Map<string, TerminalSession>;
   activeSessionId: string | null;
   isTerminalVisible: boolean;
+  autoCreateAllowed: boolean;
 
   // Actions
   addSession: (session: TerminalSession) => void;
@@ -38,6 +39,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   sessions: new Map(),
   activeSessionId: null,
   isTerminalVisible: false,
+  autoCreateAllowed: true,
 
   addSession: (session) =>
     set((state) => {
@@ -46,6 +48,7 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
       return {
         sessions: newSessions,
         activeSessionId: session.id,
+        autoCreateAllowed: false,
       };
     }),
 
@@ -61,9 +64,13 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
         newActiveId = remainingSessions.length > 0 ? (remainingSessions[0] ?? null) : null;
       }
 
+      const isEmpty = newSessions.size === 0;
+
       return {
         sessions: newSessions,
         activeSessionId: newActiveId,
+        isTerminalVisible: isEmpty ? false : state.isTerminalVisible,
+        autoCreateAllowed: isEmpty ? false : state.autoCreateAllowed,
       };
     }),
 
@@ -125,11 +132,13 @@ export const useTerminalStore = create<TerminalState>((set, get) => ({
   setTerminalVisible: (visible) =>
     set(() => ({
       isTerminalVisible: visible,
+      autoCreateAllowed: visible,
     })),
 
   toggleTerminalVisible: () =>
     set((state) => ({
       isTerminalVisible: !state.isTerminalVisible,
+      autoCreateAllowed: !state.isTerminalVisible,
     })),
 
   selectNextSession: () =>

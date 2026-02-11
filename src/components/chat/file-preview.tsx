@@ -2,7 +2,7 @@
 import { convertFileSrc } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { readFile, writeFile } from '@tauri-apps/plugin-fs';
-import { Download, FileText, Image, X } from 'lucide-react';
+import { Download, FileText, Image, Video, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ export function FilePreview({ attachment, onRemove, showRemove = true }: FilePre
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) return Image;
+    if (mimeType.startsWith('video/')) return Video;
     if (mimeType.includes('pdf')) return FileText;
     if (mimeType.includes('text')) return FileText;
     if (mimeType.includes('document') || mimeType.includes('word')) return FileText;
@@ -50,6 +51,14 @@ export function FilePreview({ attachment, onRemove, showRemove = true }: FilePre
     if (attachment.content) {
       return `data:${attachment.mimeType};base64,${attachment.content}`;
     }
+    if (attachment.filePath) {
+      return convertFileSrc(attachment.filePath);
+    }
+    return null;
+  };
+
+  // Get video source - support file path only (base64 too large)
+  const getVideoSrc = (): string | null => {
     if (attachment.filePath) {
       return convertFileSrc(attachment.filePath);
     }
@@ -73,30 +82,30 @@ export function FilePreview({ attachment, onRemove, showRemove = true }: FilePre
         return; // User cancelled
       }
 
-      // Get image data based on source
-      let imageData: Uint8Array;
+      // Get file data based on source
+      let fileData: Uint8Array;
       if (attachment.content) {
         // base64 content -> Uint8Array
         const binaryString = atob(attachment.content);
-        imageData = new Uint8Array(binaryString.length);
+        fileData = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
-          imageData[i] = binaryString.charCodeAt(i);
+          fileData[i] = binaryString.charCodeAt(i);
         }
       } else if (attachment.filePath) {
         // Read from file path
-        imageData = await readFile(attachment.filePath);
+        fileData = await readFile(attachment.filePath);
       } else {
-        logger.error('No image data available for download');
+        logger.error('No file data available for download');
         toast.error(t.Error.generic);
         return;
       }
 
       // Write file
-      await writeFile(savePath, imageData);
-      logger.info('Image downloaded successfully:', savePath);
+      await writeFile(savePath, fileData);
+      logger.info('File downloaded successfully:', savePath);
       toast.success(t.Toast.success.saved);
     } catch (error) {
-      logger.error('Failed to download image:', error);
+      logger.error('Failed to download file:', error);
       toast.error(t.Error.generic);
     }
   };
@@ -155,6 +164,62 @@ export function FilePreview({ attachment, onRemove, showRemove = true }: FilePre
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Filename and size with action buttons */}
+        <div className="mt-1 flex items-center gap-2">
+          <span className="max-w-xs truncate text-gray-500 dark:text-gray-400 text-xs">
+            {attachment.filename} ({formatFileSize(attachment.size)})
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5"
+            onClick={handleDownload}
+            title={t.Common.download}
+          >
+            <Download className="size-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (attachment.type === 'video') {
+    const videoSrc = getVideoSrc();
+    if (!videoSrc) {
+      // Fallback to file preview if no video source available
+      return null;
+    }
+
+    return (
+      <div className="relative inline-block">
+        {/* Video preview */}
+        <div className="relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          {/* biome-ignore lint/a11y/useMediaCaption: Video uploaded by user, captions not required */}
+          <video
+            className="max-h-48 max-w-xs object-contain"
+            controls
+            preload="metadata"
+            onError={(e) => logger.error('Video failed to load:', attachment.filename, e)}
+          >
+            <source src={videoSrc} type={attachment.mimeType} />
+            Your browser does not support the video tag.
+          </video>
+          {showRemove && onRemove && (
+            <Button
+              className="absolute top-1 right-1 h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              size="icon"
+              type="button"
+              variant="destructive"
+            >
+              <X size={12} />
+            </Button>
+          )}
+        </div>
 
         {/* Filename and size with action buttons */}
         <div className="mt-1 flex items-center gap-2">

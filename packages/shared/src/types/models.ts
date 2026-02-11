@@ -6,6 +6,7 @@
 export interface ModelConfig {
   name: string;
   imageInput?: boolean;
+  videoInput?: boolean;
   audioInput?: boolean;
   imageOutput?: boolean;
   interleaved?: boolean; // Indicates interleaved thinking capability

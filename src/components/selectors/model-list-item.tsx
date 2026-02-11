@@ -67,6 +67,11 @@ export function ModelListItem({
             AUDIO
           </span>
         )}
+        {showAllBadges && model.videoInput && (
+          <span className="text-[10px] px-1 py-0.5 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400">
+            VID
+          </span>
+        )}
       </div>
     </div>
   );

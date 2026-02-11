@@ -53,6 +53,8 @@ pub struct ModelConfig {
     pub image_output: bool,
     #[serde(default, rename = "audioInput")]
     pub audio_input: bool,
+    #[serde(default, rename = "videoInput")]
+    pub video_input: bool,
     #[serde(default)]
     pub interleaved: bool,
     pub providers: Vec<String>,
@@ -91,6 +93,8 @@ pub struct AvailableModel {
     pub image_output: bool,
     #[serde(rename = "audioInput")]
     pub audio_input: bool,
+    #[serde(rename = "videoInput")]
+    pub video_input: bool,
     #[serde(rename = "inputPricing")]
     pub input_pricing: Option<String>,
 }
@@ -172,6 +176,12 @@ pub enum ContentPart {
     Text { text: String },
     #[serde(rename = "image")]
     Image { image: String },
+    #[serde(rename = "video")]
+    Video {
+        video: String,
+        #[serde(rename = "mimeType")]
+        mime_type: Option<String>,
+    },
     #[serde(rename = "tool-call")]
     ToolCall {
         #[serde(rename = "toolCallId")]

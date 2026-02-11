@@ -38,7 +38,7 @@ export interface ToolMessageContent {
 
 export interface MessageAttachment {
   id: string;
-  type: 'image' | 'file' | 'code';
+  type: 'image' | 'video' | 'file' | 'code';
   filename: string;
   content?: string;
   filePath: string;

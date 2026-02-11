@@ -304,6 +304,7 @@
     "kimi-k2.5": {
       "name": "Kimi K2.5",
       "imageInput": true,
+      "videoInput": true,
       "interleaved": true,
       "providers": [
         "aiGateway",

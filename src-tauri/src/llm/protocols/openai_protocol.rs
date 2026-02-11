@@ -73,6 +73,13 @@ impl OpenAiProtocol {
                                 "image_url": { "url": format!("data:image/png;base64,{}", image) }
                             }));
                         }
+                        ContentPart::Video { video, mime_type } => {
+                            let mime = mime_type.as_deref().unwrap_or("video/mp4");
+                            mapped.push(json!({
+                                "type": "video_url",
+                                "video_url": { "url": format!("data:{};base64,{}", mime, video) }
+                            }));
+                        }
                         ContentPart::ToolCall {
                             tool_call_id,
                             tool_name,
@@ -138,6 +145,14 @@ impl OpenAiProtocol {
                             rich_parts.push(json!({
                                 "type": "image_url",
                                 "image_url": { "url": format!("data:image/png;base64,{}", image) }
+                            }));
+                        }
+                        ContentPart::Video { video, mime_type } => {
+                            has_image = true;
+                            let mime = mime_type.as_deref().unwrap_or("video/mp4");
+                            rich_parts.push(json!({
+                                "type": "video_url",
+                                "video_url": { "url": format!("data:{};base64,{}", mime, video) }
                             }));
                         }
                         ContentPart::ToolCall { .. } => {}

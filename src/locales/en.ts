@@ -104,8 +104,24 @@ const en: LocaleDefinition = {
       pasteMultipleSuccess: (count) => `${count} images pasted successfully`,
       dropHere: 'Drop images here',
     },
+    video: {
+      notSupported: 'Video Input Not Supported',
+      notSupportedDescription:
+        "The current model doesn't support video input. Please switch to a model that supports videos or remove the video to continue.",
+      supportedModels: 'Models that support videos:',
+      keepCurrentModel: 'Keep Current Model',
+      chooseModel: 'Choose Model Manually',
+      noModelsAvailable:
+        'No models with video support are currently available. Please configure API keys for providers that offer video-capable models.',
+      pasteSuccess: (filename) => `Video "${filename}" uploaded successfully`,
+      pasteMultipleSuccess: (count) => `${count} videos uploaded successfully`,
+      dropHere: 'Drop videos here',
+      sizeExceeded: (size) => `Video file size (${size}) exceeds the 100MB limit`,
+      unsupportedFormat: (format) => `Unsupported video format: ${format}`,
+    },
     files: {
       uploadImage: 'Upload Image',
+      uploadVideo: 'Upload Video',
       uploadFile: 'Upload File',
       addAttachment: 'Add attachment',
       fileAdded: (filename) => `File "${filename}" added successfully`,

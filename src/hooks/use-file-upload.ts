@@ -35,6 +35,17 @@ export function useFileUpload() {
     }
   }, []);
 
+  const uploadVideo = useCallback(async (): Promise<MessageAttachment[]> => {
+    try {
+      setIsUploading(true);
+      return await fileUploadService.uploadVideosFromDialog();
+    } catch (_error) {
+      return [];
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
+
   const uploadFromClipboard = useCallback(async (blob: Blob): Promise<MessageAttachment | null> => {
     try {
       setIsUploading(true);
@@ -67,6 +78,7 @@ export function useFileUpload() {
   return {
     uploadImage,
     uploadFile,
+    uploadVideo,
     uploadFromClipboard,
     uploadFromFileData,
     isUploading,

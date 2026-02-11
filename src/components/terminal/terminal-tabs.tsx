@@ -11,12 +11,14 @@ export function TerminalTabs() {
   const activeSessionId = useTerminalStore((state) => state.activeSessionId);
   const setActiveSession = useTerminalStore((state) => state.setActiveSession);
   const rootPath = useRepositoryStore((state) => state.rootPath);
+  const setTerminalVisible = useTerminalStore((state) => state.setTerminalVisible);
 
   // Convert Map to Array for rendering
   const sessionArray = Array.from(sessions.values());
 
   const handleNewTerminal = async () => {
     try {
+      setTerminalVisible(true);
       await terminalService.createTerminal(rootPath || undefined);
     } catch (error) {
       logger.error('Failed to create new terminal', error);

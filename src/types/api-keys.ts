@@ -26,6 +26,7 @@ export interface AvailableModel {
   imageInput: boolean;
   imageOutput: boolean;
   audioInput: boolean;
+  videoInput: boolean;
   inputPricing?: string;
 }
 

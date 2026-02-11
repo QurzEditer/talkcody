@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { parseModelIdentifier } from '@/providers/core/provider-utils';
+import { fileService } from '@/services/file-service';
 import type { Message as ModelMessage, ProviderOptions } from '@/services/llm/types';
 import type { ConvertMessagesOptions, ToolMessageContent, UIMessage } from '@/types/agent';
 
@@ -15,6 +16,12 @@ const textPartSchema = z.object({
 const imagePartSchema = z.object({
   type: z.literal('image'),
   image: z.string(),
+});
+
+const videoPartSchema = z.object({
+  type: z.literal('video'),
+  video: z.string(),
+  mimeType: z.string().optional(),
 });
 
 const toolCallPartSchema = z.object({
@@ -39,7 +46,10 @@ const systemMessageSchema = z.object({
 
 const userMessageSchema = z.object({
   role: z.literal('user'),
-  content: z.union([z.string(), z.array(z.union([textPartSchema, imagePartSchema]))]),
+  content: z.union([
+    z.string(),
+    z.array(z.union([textPartSchema, imagePartSchema, videoPartSchema])),
+  ]),
   providerOptions: z.unknown().optional(),
 });
 
@@ -254,7 +264,11 @@ export async function convertMessages(
     const contentStr = typeof msg.content === 'string' ? msg.content : '';
 
     if (msg.attachments && msg.attachments.length > 0) {
-      const content: Array<{ type: 'text'; text: string } | { type: 'image'; image: string }> = [];
+      const content: Array<
+        | { type: 'text'; text: string }
+        | { type: 'image'; image: string }
+        | { type: 'video'; video: string; mimeType?: string }
+      > = [];
 
       if (contentStr.trim()) {
         content.push({
@@ -278,6 +292,28 @@ export async function convertMessages(
             content.push({
               type: 'image' as const,
               image: attachment.content,
+            });
+          }
+        } else if (attachment.type === 'video' && attachment.filePath) {
+          // Load video content from file path and convert to base64
+          try {
+            const base64Data = await fileService.getFileBase64(attachment.filePath);
+            content.push({
+              type: 'video' as const,
+              video: base64Data,
+              mimeType: attachment.mimeType,
+            });
+          } catch (error) {
+            logger.error(
+              '[convertMessages] Failed to load video content:',
+              attachment.filename,
+              error
+            );
+            // Fallback to file path reference
+            const filePath = attachment.filePath ?? attachment.filename;
+            content.push({
+              type: 'text' as const,
+              text: `The video file path is ${filePath}`,
             });
           }
         } else if (attachment.type === 'file' || attachment.type === 'code') {

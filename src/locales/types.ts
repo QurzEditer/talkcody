@@ -100,8 +100,22 @@ export interface LocaleDefinition {
       pasteMultipleSuccess: (count: number) => string;
       dropHere: string;
     };
+    video: {
+      notSupported: string;
+      notSupportedDescription: string;
+      supportedModels: string;
+      keepCurrentModel: string;
+      chooseModel: string;
+      noModelsAvailable: string;
+      pasteSuccess: (filename: string) => string;
+      pasteMultipleSuccess: (count: number) => string;
+      dropHere: string;
+      sizeExceeded: (size: string) => string;
+      unsupportedFormat: (format: string) => string;
+    };
     files: {
       uploadImage: string;
+      uploadVideo: string;
       uploadFile: string;
       addAttachment: string;
       fileAdded: (filename: string) => string;
