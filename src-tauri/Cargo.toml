@@ -85,7 +85,7 @@ open-lark = { git = "https://github.com/talkcody/open-lark", branch = "fix-user-
 
 [target."cfg(any(target_os = \"macos\", windows, target_os = \"linux\"))".dependencies]
 tauri-plugin-single-instance = { version = "2.4.0", features = ["deep-link"] }
-tauri-plugin-updater = "2"
+tauri-plugin-updater = "2.10"
 notify = "6.1"
 lazy_static = "1.5"
 chrono = { version = "0.4", features = ["serde"] }
