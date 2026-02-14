@@ -25,6 +25,7 @@ import { editFile } from './edit-file-tool';
 import { exitPlanModeTool } from './exit-plan-mode-tool';
 import { githubPRTool } from './github-pr-tool';
 import { globTool } from './glob-tool';
+import { imageGenerationTool } from './image-generation-tool';
 import { listFiles } from './list-files-tool';
 import { lspTool } from './lsp-tool';
 import { readFile } from './read-file-tool';
@@ -78,6 +79,7 @@ export const TOOL_DEFINITIONS = {
       renderDoingUI: false,
     },
   },
+  // Other read-only tools
   glob: {
     tool: globTool,
     label: 'Glob',
@@ -88,6 +90,17 @@ export const TOOL_DEFINITIONS = {
       renderDoingUI: false,
     },
   },
+  imageGeneration: {
+    tool: imageGenerationTool,
+    label: 'Image Generation',
+    metadata: {
+      category: 'other' as ToolCategory,
+      canConcurrent: false,
+      fileOperation: false,
+      renderDoingUI: true,
+    },
+  },
+
   codeSearch: {
     tool: codeSearch,
     label: 'Code Search',

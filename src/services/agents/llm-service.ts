@@ -10,7 +10,6 @@ import { logger } from '@/lib/logger';
 import { convertToAnthropicFormat } from '@/lib/message-convert';
 import { MessageTransform } from '@/lib/message-transform';
 import { validateAnthropicMessages } from '@/lib/message-validate';
-import { simpleFetch } from '@/lib/tauri-fetch';
 import { toOpenAIToolDefinition } from '@/lib/tool-schema';
 import { createLlmTraceContext } from '@/lib/trace-utils';
 import { UsageTokenUtils } from '@/lib/usage-token-utils';
@@ -25,13 +24,11 @@ import {
   lastReviewedChangeTimestamp,
 } from '@/services/auto-code-review-service';
 import { databaseService } from '@/services/database-service';
-import { fileService } from '@/services/file-service';
 import { hookService } from '@/services/hooks/hook-service';
 import { hookStateService } from '@/services/hooks/hook-state-service';
 import { llmClient, type StreamTextResult } from '@/services/llm/llm-client';
 import type {
   ContentPart,
-  ImageGenerationResponse,
   Message as LlmMessage,
   StreamEvent as LlmStreamEvent,
   Message as ModelMessage,
@@ -78,6 +75,11 @@ import { taskFileService } from '../task-file-service';
 import { ErrorHandler } from './error-handler';
 import { StreamProcessor } from './stream-processor';
 import { ToolExecutor } from './tool-executor';
+
+function getTranslations() {
+  const language = (useSettingsStore.getState().language || 'en') as SupportedLocale;
+  return getLocale(language);
+}
 
 export class LLMService {
   private readonly messageCompactor: ContextCompactor;
@@ -282,131 +284,6 @@ export class LLMService {
     }
   }
 
-  private async generateImageResponse(
-    model: string,
-    inputMessages: UIMessage[]
-  ): Promise<{ message: string; attachments: MessageAttachment[] }> {
-    const t = this.getTranslations();
-    const latestUserMessage = [...inputMessages]
-      .reverse()
-      .find((message) => message.role === 'user');
-    const prompt = typeof latestUserMessage?.content === 'string' ? latestUserMessage.content : '';
-
-    if (!prompt.trim()) {
-      throw new Error(t.ImageGeneration.errors.emptyPrompt);
-    }
-
-    const imageModel =
-      model || (await modelTypeService.resolveModelType(ModelType.IMAGE_GENERATOR));
-
-    const response = await llmClient.generateImage({
-      model: imageModel,
-      prompt,
-      responseFormat: 'b64_json',
-    });
-
-    const attachments = await this.buildImageAttachments(response);
-    if (attachments.length === 0) {
-      throw new Error(t.ImageGeneration.errors.noImages);
-    }
-
-    return {
-      message: t.ImageGeneration.success.generated(attachments.length),
-      attachments,
-    };
-  }
-
-  private async buildImageAttachments(
-    response: ImageGenerationResponse
-  ): Promise<MessageAttachment[]> {
-    const attachments: MessageAttachment[] = [];
-    for (const image of response.images) {
-      if (image.b64Json) {
-        const attachment = await this.imageAttachmentFromBase64(image.b64Json, image.mimeType);
-        attachments.push(attachment);
-      } else if (image.url) {
-        const attachment = await this.imageAttachmentFromUrl(image.url);
-        attachments.push(attachment);
-      }
-    }
-    return attachments;
-  }
-
-  private async imageAttachmentFromBase64(
-    base64Data: string,
-    mimeType: string
-  ): Promise<MessageAttachment> {
-    const base64 = this.normalizeBase64Image(base64Data);
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-
-    const normalizedMimeType = mimeType || 'image/png';
-    const extension = this.extensionFromMimeType(normalizedMimeType);
-    const filename = `generated-${Date.now()}.${extension}`;
-    const filePath = await fileService.saveGeneratedImage(bytes, filename);
-
-    return {
-      id: generateId(),
-      type: 'image',
-      filename,
-      content: base64,
-      filePath,
-      mimeType: normalizedMimeType,
-      size: bytes.length,
-    };
-  }
-
-  private normalizeBase64Image(base64Data: string): string {
-    let updated = base64Data.trim();
-    if (updated.startsWith('data:')) {
-      updated = updated.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, '');
-    }
-    if (/^[A-Za-z0-9+/=\s]+$/.test(updated)) {
-      return updated.replace(/\s+/g, '');
-    }
-    return base64Data;
-  }
-
-  private async imageAttachmentFromUrl(url: string): Promise<MessageAttachment> {
-    const response = await simpleFetch(url, {
-      method: 'GET',
-      headers: { Accept: 'image/*' },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download image: ${response.status}`);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    const mimeType = response.headers.get('content-type') || 'image/png';
-    const extension = this.extensionFromMimeType(mimeType);
-    const filename = `generated-${Date.now()}.${extension}`;
-    const filePath = await fileService.saveGeneratedImage(bytes, filename);
-    const content = fileService.uint8ArrayToBase64Public(bytes);
-
-    return {
-      id: generateId(),
-      type: 'image',
-      filename,
-      content,
-      filePath,
-      mimeType,
-      size: bytes.length,
-    };
-  }
-
-  private extensionFromMimeType(mimeType: string): string {
-    if (mimeType.includes('png')) return 'png';
-    if (mimeType.includes('jpeg') || mimeType.includes('jpg')) return 'jpg';
-    if (mimeType.includes('gif')) return 'gif';
-    if (mimeType.includes('webp')) return 'webp';
-    return 'png';
-  }
-
   private getTranslations() {
     const language = (useSettingsStore.getState().language || 'en') as SupportedLocale;
     return getLocale(language);
@@ -421,7 +298,7 @@ export class LLMService {
     abortController?: AbortController,
     onStatus?: (status: string) => void
   ): Promise<boolean> {
-    const t = this.getTranslations();
+    const t = getTranslations();
     onStatus?.(t.LLMService.status.contextTooLongCompacting);
 
     const compressionResult = await this.messageCompactor.compactMessages(
@@ -517,23 +394,6 @@ export class LLMService {
           freshContext = false,
         } = options;
 
-        const modelKey = parseModelIdentifier(model).modelKey.toLowerCase();
-        const isImageGenerationModel = modelKey.includes('image') || modelKey.startsWith('dall-e');
-        const isImageGenerationTask =
-          isImageGenerationModel && this.taskId && this.taskId !== 'nested' && !isSubagent;
-
-        if (isImageGenerationTask) {
-          const { message, attachments } = await this.generateImageResponse(model, inputMessages);
-          onAssistantMessageStart?.();
-          for (const attachment of attachments) {
-            callbacks.onAttachment?.(attachment);
-          }
-          onChunk(message);
-          onComplete?.(message);
-          resolve();
-          return;
-        }
-
         // Merge compression config with defaults
         const compressionConfig: CompressionConfig = {
           ...this.getDefaultCompressionConfig(),
@@ -551,7 +411,7 @@ export class LLMService {
           agentId: agentId || 'default',
           reasoningEffort,
         });
-        const t = this.getTranslations();
+        const t = getTranslations();
         onStatus?.(t.LLMService.status.initializing);
 
         // Update task with the model being used if it's a main task

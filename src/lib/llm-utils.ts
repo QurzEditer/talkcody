@@ -281,17 +281,25 @@ export async function convertMessages(
       logger.info('[convertMessages] Processing attachments for model:', { modelKey });
 
       for (const attachment of msg.attachments) {
-        if (attachment.type === 'image' && attachment.content) {
-          if (modelKey === 'glm-4.6' || modelKey === 'glm-4.7') {
+        if (attachment.type === 'image') {
+          if (msg.role === 'user' && attachment.content) {
+            if (modelKey === 'glm-4.6' || modelKey === 'glm-4.7') {
+              const filePath = attachment.filePath ?? attachment.filename;
+              content.push({
+                type: 'text' as const,
+                text: `The image file path is ${filePath}`,
+              });
+            } else {
+              content.push({
+                type: 'image' as const,
+                image: attachment.content,
+              });
+            }
+          } else {
             const filePath = attachment.filePath ?? attachment.filename;
             content.push({
               type: 'text' as const,
               text: `The image file path is ${filePath}`,
-            });
-          } else {
-            content.push({
-              type: 'image' as const,
-              image: attachment.content,
             });
           }
         } else if (attachment.type === 'video' && attachment.filePath) {

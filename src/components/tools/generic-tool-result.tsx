@@ -12,7 +12,7 @@ export function GenericToolResult({ success, message, error }: GenericToolResult
       <div className="p-4 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950 dark:border-red-800 w-full">
         {(error || message) && (
           <div className="flex items-start gap-2 text-red-600 text-sm dark:text-red-400">
-            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span className="break-words">{error || message}</span>
           </div>
         )}

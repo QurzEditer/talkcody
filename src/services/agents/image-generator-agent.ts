@@ -65,9 +65,11 @@ When user descriptions are unclear or incomplete, please use askUserQuestionsToo
 
 - Include an "Other" option for custom input
 
-## Rules
+## Using imageGeneration Tool
 
-1. askUserQuestionsTool should generally be used only once, and a maximum of 3 times.
+- After requirements are clear, call imageGeneration to create the image.
+- Provide a detailed prompt with style, color, and composition.
+- Specify size, quality, and model only when the user requests it.
 `;
 
 export class ImageGeneratorAgent {
@@ -78,6 +80,7 @@ export class ImageGeneratorAgent {
   static getDefinition(): AgentDefinition {
     const selectedTools = {
       askUserQuestions: getToolSync('askUserQuestions'),
+      imageGeneration: getToolSync('imageGeneration'),
     };
 
     return {
@@ -85,7 +88,7 @@ export class ImageGeneratorAgent {
       name: 'Image Generator',
       description:
         'AI image generation specialist that creates high-quality images from text descriptions with intelligent requirement analysis',
-      modelType: ModelType.IMAGE_GENERATOR,
+      modelType: ModelType.MAIN,
       hidden: false,
       isDefault: false,
       canBeSubagent: false,

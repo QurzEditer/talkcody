@@ -1,4 +1,5 @@
-import { exists } from '@tauri-apps/plugin-fs';
+import { join, resolveResource } from '@tauri-apps/api/path';
+import { exists, readTextFile } from '@tauri-apps/plugin-fs';
 import { z } from 'zod';
 import { GenericToolDoing } from '@/components/tools/generic-tool-doing';
 import { GenericToolResult } from '@/components/tools/generic-tool-result';
@@ -110,9 +111,16 @@ export const readFile = createTool({
 This tool will return the complete file content as a string by default.
 You can optionally specify a starting line and number of lines to read a specific portion of the file.
 
-The file path should be an absolute path.`,
+Path formats:
+- Absolute path: /Users/name/project/file.txt (for workspace files)
+- $RESOURCE prefix: $RESOURCE/ppt-references/styles/blueprint.md (for bundled app resources, MUST use exact prefix including $)
+- Relative path: src/file.ts (will be resolved against workspace root)`,
   inputSchema: z.object({
-    file_path: z.string().describe('The absolute path of file you want to read'),
+    file_path: z
+      .string()
+      .describe(
+        'The file path to read. Use absolute path for workspace files, or $RESOURCE/... prefix for bundled resources like PPT style guides. The $RESOURCE prefix MUST be used exactly as-is, do not convert to absolute path.'
+      ),
     start_line: z
       .number()
       .min(1)
@@ -129,16 +137,7 @@ The file path should be an absolute path.`,
   canConcurrent: true,
   execute: async ({ file_path, start_line, line_count, filePath, path }, context) => {
     try {
-      const rootPath = await getEffectiveWorkspaceRoot(context.taskId);
       const resolvedPath = file_path ?? filePath ?? path;
-      if (!rootPath) {
-        return {
-          success: false,
-          file_path: resolvedPath,
-          content: null,
-          message: 'Project root path is not set.',
-        };
-      }
       if (!resolvedPath) {
         logger.warn('readFile called without file_path', {
           taskId: context.taskId,
@@ -150,11 +149,67 @@ The file path should be an absolute path.`,
           message: 'Missing required file_path parameter.',
         };
       }
-      // logger.info('readFile: Normalizing file path. taskId:', {
-      //   file_path: resolvedPath,
-      //   rootPath,
-      //   contextTaskId: context.taskId,
-      // });
+
+      // Handle $RESOURCE prefix for bundled resource files
+      if (resolvedPath.startsWith('$RESOURCE/')) {
+        const resourcePath = resolvedPath.slice('$RESOURCE/'.length);
+        const normalizedResourcePath = resourcePath.replace(/\\/g, '/');
+        const resourceSegments = normalizedResourcePath.split('/').filter(Boolean);
+        try {
+          const fullPath = await resolveResource(resourcePath);
+          const content = await readTextFile(fullPath);
+          return {
+            success: true,
+            file_path: resolvedPath,
+            content,
+            message: `Successfully read resource file: ${resolvedPath}`,
+          };
+        } catch (_error) {
+          try {
+            const rootPath = await getEffectiveWorkspaceRoot(context.taskId);
+            if (!rootPath) {
+              return {
+                success: false,
+                file_path: resolvedPath,
+                content: null,
+                message: 'Project root path is not set.',
+              };
+            }
+
+            const devResourcePath = await join(
+              rootPath,
+              'src-tauri',
+              'resources',
+              ...resourceSegments
+            );
+            const content = await readTextFile(devResourcePath);
+            return {
+              success: true,
+              file_path: resolvedPath,
+              content,
+              message: `Successfully read resource file: ${resolvedPath}`,
+            };
+          } catch (_devError) {
+            return {
+              success: false,
+              file_path: resolvedPath,
+              content: null,
+              message: `Resource file not found: ${resourcePath}`,
+            };
+          }
+        }
+      }
+
+      const rootPath = await getEffectiveWorkspaceRoot(context.taskId);
+      if (!rootPath) {
+        return {
+          success: false,
+          file_path: resolvedPath,
+          content: null,
+          message: 'Project root path is not set.',
+        };
+      }
+
       file_path = await normalizeFilePath(rootPath, resolvedPath);
 
       // Check if file exists before attempting to read it

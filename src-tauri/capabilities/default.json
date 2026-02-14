@@ -42,6 +42,7 @@
     },
     "fs:allow-read",
     "fs:allow-write",
+    "fs:allow-resource-read-recursive",
     "shell:default",
     "shell:allow-spawn",
     "shell:allow-open",

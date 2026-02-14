@@ -82,6 +82,7 @@ class AgentRegistry {
     const { CreateAgentAgent } = await import('./create-agent-agent');
     const { CreateSkillAgent } = await import('./create-skill-agent');
     const { ImageGeneratorAgent } = await import('./image-generator-agent');
+    const { PPTGeneratorAgent } = await import('./ppt-generator-agent');
 
     const plannerTools = await this.buildPlannerTools();
 
@@ -100,6 +101,7 @@ class AgentRegistry {
       CreateAgentAgent.getDefinition(),
       CreateSkillAgent.getDefinition(),
       ImageGeneratorAgent.getDefinition(),
+      PPTGeneratorAgent.getDefinition(),
     ];
 
     // Load into memory and register UI renderers

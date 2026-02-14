@@ -113,10 +113,10 @@ describe('llmClient', () => {
 
     (invoke as ReturnType<typeof vi.fn>).mockResolvedValue(mockResult);
 
-    const request = {
+      const request = {
       model: 'dall-e-3@openai',
       prompt: 'A sunset over mountains',
-      responseFormat: 'b64_json',
+      responseFormat: 'url',
     };
 
     const result = await llmClient.generateImage(request);
