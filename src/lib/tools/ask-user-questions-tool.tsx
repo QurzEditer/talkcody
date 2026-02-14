@@ -68,12 +68,6 @@ async function executeAskUserQuestions(
   });
 }
 
-/**
- * AskUserQuestions Tool
- *
- * Allows the agent to ask the user questions and pause execution until
- * the user provides answers via the UI.
- */
 export const askUserQuestionsTool = createTool({
   name: 'askUserQuestions',
   description: `Ask the user one or more questions to gather additional information needed to complete the task.
@@ -88,7 +82,7 @@ Each question can have:
 Use this tool judiciously to maintain a balance between gathering necessary information and avoiding excessive back-and-forth.`,
   inputSchema,
   canConcurrent: false,
-  hidden: true,
+  hidden: false,
   execute: executeAskUserQuestions,
 
   renderToolDoing: (params: z.infer<typeof inputSchema>, context?: ToolRenderContext) => {

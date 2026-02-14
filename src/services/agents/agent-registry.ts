@@ -219,7 +219,7 @@ class AgentRegistry {
     const readFile = await getTool('readFile');
     const codeSearch = await getTool('codeSearch');
     const glob = await getTool('glob');
-    const lsp = await getTool('lsp');
+    const askUserQuestions = await getTool('askUserQuestions');
     const listFiles = await getTool('listFiles');
     const todoWrite = await getTool('todoWrite');
     const writeFile = await getTool('writeFile');
@@ -233,7 +233,7 @@ class AgentRegistry {
       readFile,
       codeSearch,
       glob,
-      lsp,
+      askUserQuestions,
       listFiles,
       todoWrite,
       writeFile,
@@ -607,10 +607,6 @@ class AgentRegistry {
     try {
       // Use the tool restoration function to properly convert stored tools back to AgentToolSet
       tools = await restoreToolsFromConfig(dbAgent.tools_config);
-      // logger.info(
-      //   `Restored tools for agent ${dbAgent.id}:`,
-      //   Object.keys(tools)
-      // );
     } catch (error) {
       logger.error(`Failed to restore tools for agent ${dbAgent.id}:`, error);
     }

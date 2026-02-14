@@ -327,7 +327,7 @@ const DEFAULT_SETTINGS: Omit<SettingsState, 'loading' | 'error' | 'isInitialized
   lsp_show_warnings: true,
   lsp_show_info: true,
   lsp_show_hints: false,
-  prompt_enhancement_context_enabled: true,
+  prompt_enhancement_context_enabled: false,
   prompt_enhancement_model: '',
 };
 

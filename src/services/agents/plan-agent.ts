@@ -28,19 +28,9 @@ Use the following tools to collect information:
 - **glob**: Find relevant files.
 - **codeSearch**: Search for code patterns and dependencies.
 - **listFiles**: Explore directory structure.
-- **bash**: Execute read-only commands if necessary.
 - **webSearch/webFetch**: Look up documentation or technical info.
 
 **Parallel Principle**: Return ALL tool calls in a single response!
-
-\`\`\`
-- readFile: /src/auth/login.ts
-- readFile: /src/auth/register.ts
-- readFile: /src/auth/middleware.ts
-- readFile: /src/auth/session.ts
-- codeSearch: "authenticate" in /src
-- globTool: /src/auth/**/*.ts
-\`\`\`
 
 ### Phase 3: Design Solution
 Generate a structured plan following this format:
