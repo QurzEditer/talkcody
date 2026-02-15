@@ -97,8 +97,8 @@ export class ImageGeneratorAgent {
       tools: selectedTools,
       role: 'write',
       dynamicPrompt: {
-        enabled: false,
-        providers: [],
+        enabled: true,
+        providers: ['env', 'agents_md'],
         variables: {},
       },
     };

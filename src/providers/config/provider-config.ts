@@ -175,6 +175,24 @@ export const PROVIDER_CONFIGS: ProviderRegistry = {
     required: false,
     type: 'openai-compatible',
   },
+
+  volcengine: {
+    id: 'volcengine',
+    name: 'Volcengine (ByteDance)',
+    apiKeyName: 'VOLCENGINE_API_KEY',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    required: false,
+    type: 'openai-compatible',
+  },
+
+  alibaba: {
+    id: 'alibaba',
+    name: 'Alibaba (DashScope)',
+    apiKeyName: 'ALIBABA_API_KEY',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    required: false,
+    type: 'openai-compatible',
+  },
 } as const;
 
 // Generate types from definitions

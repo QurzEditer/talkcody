@@ -56,6 +56,8 @@ export function getDocLinks() {
       kimi_coding: `${BASE_URL}/configuration/api-keys#moonshot`,
       serper: `${BASE_URL}/configuration/api-keys#serper`,
       zai: `${BASE_URL}/configuration/api-keys#z-ai`,
+      volcengine: `${BASE_URL}/configuration/api-keys#volcengine`,
+      alibaba: `${BASE_URL}/configuration/api-keys#alibaba`,
     },
 
     // Introduction

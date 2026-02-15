@@ -7,7 +7,7 @@ import { decodeObjectHtmlEntities, generateId } from '@/lib/utils';
 import { databaseService } from '@/services/database-service';
 import { hookService } from '@/services/hooks/hook-service';
 import { useSettingsStore } from '@/stores/settings-store';
-import type { AgentLoopState, AgentToolSet, UIMessage } from '@/types/agent';
+import type { AgentLoopState, AgentToolSet, MessageAttachment, UIMessage } from '@/types/agent';
 import type { ToolExecuteContext, ToolInput, ToolOutput, ToolWithUI } from '@/types/tool';
 import type { AgentExecutionGroup, AgentExecutionStage } from './agent-dependency-analyzer';
 import {
@@ -124,6 +124,58 @@ export class ToolExecutor {
       }
     }
     return result;
+  }
+
+  private extractAttachments(result: unknown): MessageAttachment[] | undefined {
+    if (!result || typeof result !== 'object') {
+      return undefined;
+    }
+
+    const record = result as Record<string, unknown>;
+    const attachmentsValue = record.attachments ?? record._attachments;
+    if (!Array.isArray(attachmentsValue)) {
+      return undefined;
+    }
+
+    const attachments: MessageAttachment[] = [];
+
+    for (const item of attachmentsValue) {
+      if (!item || typeof item !== 'object') {
+        continue;
+      }
+
+      const attachment = item as Record<string, unknown>;
+      const type = attachment.type;
+      if (type !== 'image' && type !== 'video' && type !== 'file' && type !== 'code') {
+        continue;
+      }
+
+      const filename = attachment.filename;
+      const filePath = attachment.filePath;
+      const mimeType = attachment.mimeType;
+      const size = attachment.size;
+
+      if (
+        typeof filename !== 'string' ||
+        typeof filePath !== 'string' ||
+        typeof mimeType !== 'string' ||
+        typeof size !== 'number'
+      ) {
+        continue;
+      }
+
+      attachments.push({
+        id: typeof attachment.id === 'string' ? attachment.id : generateId(),
+        type,
+        filename,
+        content: typeof attachment.content === 'string' ? attachment.content : undefined,
+        filePath,
+        mimeType,
+        size,
+      });
+    }
+
+    return attachments.length > 0 ? attachments : undefined;
   }
 
   private isExecutableTool(
@@ -447,6 +499,7 @@ export class ToolExecutor {
 
         // Create tool-result message after execution
         if (onToolMessage) {
+          const toolAttachments = this.extractAttachments(toolResult);
           const toolResultMessage: UIMessage = {
             id: `${toolCall.toolCallId}-result`, // Use consistent ID based on toolCallId
             role: 'tool',
@@ -463,6 +516,7 @@ export class ToolExecutor {
             toolCallId: toolCall.toolCallId,
             toolName: toolCall.toolName,
             taskId: options.taskId,
+            attachments: toolAttachments,
           };
           onToolMessage(toolResultMessage);
         } else {

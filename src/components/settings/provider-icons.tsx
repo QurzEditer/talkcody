@@ -6,6 +6,7 @@ import {
   SiOpenaigym,
   SiVercel,
 } from '@icons-pack/react-simple-icons';
+import { Cloud, Zap } from 'lucide-react';
 import type { ComponentType } from 'react';
 
 interface IconProps {
@@ -54,6 +55,8 @@ export const PROVIDER_ICONS: Record<string, ComponentType<IconProps>> = {
   github_copilot: createImageIcon('/icons/providers/github-copilot.svg', 'GitHub Copilot', true),
   zai: createImageIcon('/icons/providers/zai.svg', 'ZAI', true),
   groq: createImageIcon('/icons/providers/groq.svg', 'Groq', true),
+  volcengine: Zap, // Using Zap icon for ByteDance/Volcengine (represents energy/speed)
+  alibaba: Cloud, // Using Cloud icon for Alibaba/DashScope (represents cloud service)
 };
 
 // Provider icon component

@@ -42,6 +42,8 @@ const PROVIDER_MODELS_ENDPOINTS: Record<string, string | null> = {
   kimi_coding: 'https://api.kimi.com/coding/v1/models',
   github_copilot: 'https://api.githubcopilot.com/models',
   groq: 'https://api.groq.com/openai/v1/models',
+  volcengine: null, // Volcengine doesn't support /v1/models endpoint
+  alibaba: null, // Alibaba/DashScope doesn't support /v1/models endpoint
   // Non-AI providers, no need to test
   tavily: null,
   serper: null,

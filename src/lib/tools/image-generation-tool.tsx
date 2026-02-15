@@ -4,11 +4,13 @@ import { GenericToolResult } from '@/components/tools/generic-tool-result';
 import { createTool } from '@/lib/create-tool';
 import { logger } from '@/lib/logger';
 import { simpleFetch } from '@/lib/tauri-fetch';
+import { generateId } from '@/lib/utils';
 import { getLocale, type SupportedLocale } from '@/locales';
 import { fileService } from '@/services/file-service';
 import { llmClient } from '@/services/llm/llm-client';
 import type { ImageGenerationRequest } from '@/services/llm/types';
 import { useSettingsStore } from '@/stores/settings-store';
+import type { MessageAttachment } from '@/types/agent';
 
 export const imageGenerationTool = createTool({
   name: 'imageGeneration',
@@ -52,7 +54,7 @@ Quality options:
   canConcurrent: false, // Image generation is resource-intensive, don't run concurrently
   execute: async ({ prompt, size, quality, n }, _context) => {
     try {
-      logger.info('Image generation requested', { prompt: prompt.slice(0, 100), model, size, n });
+      logger.info('Image generation requested', { prompt: prompt.slice(0, 100), size, n });
 
       // Build request
       const request: ImageGenerationRequest = {
@@ -111,6 +113,7 @@ Quality options:
         revisedPrompt?: string | null;
         url?: string | null;
       }> = [];
+      const attachments: MessageAttachment[] = [];
 
       for (const [index, img] of response.images.entries()) {
         try {
@@ -118,20 +121,39 @@ Quality options:
           let mimeType = img.mimeType || 'image/png';
 
           if (img.url) {
-            const download = await simpleFetch(img.url, {
+            logger.info(
+              `[imageGeneration] Downloading image from URL: ${img.url.substring(0, 100)}...`
+            );
+            // Use native fetch for image download to avoid binary data corruption
+            // simpleFetch uses Tauri proxy which converts body to string, breaking binary data
+            const download = await fetch(img.url, {
               method: 'GET',
               headers: { Accept: 'image/*' },
             });
 
             if (!download.ok) {
+              logger.error(
+                `[imageGeneration] Failed to download image: ${download.status} ${download.statusText}`
+              );
               throw new Error(`Failed to download image: ${download.status}`);
             }
 
             const buffer = await download.arrayBuffer();
             bytes = new Uint8Array(buffer);
+            logger.info(`[imageGeneration] Downloaded ${bytes.length} bytes`);
+
             const headerType = download.headers.get('content-type');
             if (headerType) {
               mimeType = headerType;
+              logger.info(`[imageGeneration] Content-Type from header: ${mimeType}`);
+            }
+
+            // Check if downloaded data looks like an image (check magic bytes)
+            if (bytes.length > 4) {
+              const magic = Array.from(bytes.slice(0, 4))
+                .map((b) => b.toString(16).padStart(2, '0'))
+                .join(' ');
+              logger.info(`[imageGeneration] File magic bytes: ${magic}`);
             }
           } else if (img.b64Json) {
             bytes = decodeBase64ToBytes(img.b64Json);
@@ -142,7 +164,9 @@ Quality options:
 
           const extension = extensionFromMimeType(mimeType);
           const filename = `generated-${timestamp}-${index + 1}.${extension}`;
+          logger.info(`[imageGeneration] Saving image as ${filename}, mimeType: ${mimeType}`);
           const filePath = await fileService.saveGeneratedImage(bytes, filename);
+          logger.info(`[imageGeneration] Image saved to: ${filePath}`);
 
           savedImages.push({
             filePath,
@@ -151,6 +175,15 @@ Quality options:
             mimeType,
             revisedPrompt: img.revisedPrompt,
             url: img.url,
+          });
+
+          attachments.push({
+            id: generateId(),
+            type: 'image',
+            filename,
+            filePath,
+            mimeType,
+            size: bytes.length,
           });
         } catch (error) {
           logger.error('Failed to save generated image:', error);
@@ -171,6 +204,7 @@ Quality options:
         provider: response.provider,
         images: savedImages,
         count: savedImages.length,
+        attachments,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

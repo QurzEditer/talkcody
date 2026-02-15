@@ -167,7 +167,17 @@ describe('LLMService image generation tool orchestration', () => {
       };
     });
 
-    const imageExecute = vi.fn(async (input) => ({ success: true, input }));
+    const attachments = [
+      {
+        id: 'attach-1',
+        type: 'image' as const,
+        filename: 'generated-1.png',
+        filePath: '/tmp/generated-1.png',
+        mimeType: 'image/png',
+        size: 123,
+      },
+    ];
+    const imageExecute = vi.fn(async (input) => ({ success: true, input, attachments }));
     const imageTool = createStubTool('imageGeneration', imageExecute, {
       type: 'object',
       properties: {
@@ -179,7 +189,7 @@ describe('LLMService image generation tool orchestration', () => {
     const askTool = createStubTool('askUserQuestions');
 
     const service = new LLMService('task-1');
-    const toolMessages: Array<{ content: unknown }> = [];
+    const toolMessages: Array<{ content: unknown; attachments?: unknown }> = [];
 
     await service.runAgentLoop(
       {
@@ -232,6 +242,7 @@ describe('LLMService image generation tool orchestration', () => {
 
     expect(toolCallMessage).toBeTruthy();
     expect(toolResultMessage).toBeTruthy();
+    expect((toolResultMessage as { attachments?: unknown }).attachments).toEqual(attachments);
     expect(imageExecute).toHaveBeenCalledTimes(1);
     expect(imageExecute.mock.calls[0]?.[0]).toMatchObject({ prompt: 'sunset' });
     expect(imageExecute.mock.calls[0]?.[1]).toMatchObject({ taskId: 'task-1' });

@@ -566,6 +566,51 @@
         "input": "0",
         "output": "0"
       }
+    },
+    "doubao-seedream-4-5-251128": {
+      "name": "Image Doubao Seedream",
+      "imageInput": false,
+      "imageOutput": true,
+      "providers": [
+        "volcengine"
+      ],
+      "providerMappings": {
+        "volcengine": "doubao-seedream-4-5-251128"
+      },
+      "pricing": {
+        "input": "0",
+        "output": "0"
+      }
+    },
+    "glm-image": {
+      "name": "Image GLM",
+      "imageInput": false,
+      "imageOutput": true,
+      "providers": [
+        "zhipu"
+      ],
+      "providerMappings": {
+        "zhipu": "glm-image"
+      },
+      "pricing": {
+        "input": "0",
+        "output": "0"
+      }
+    },
+    "qwen-image-max": {
+      "name": "Qwen Image Max",
+      "imageInput": false,
+      "imageOutput": true,
+      "providers": [
+        "alibaba"
+      ],
+      "providerMappings": {
+        "alibaba": "qwen-image-max"
+      },
+      "pricing": {
+        "input": "0",
+        "output": "0"
+      }
     }
   }
 }
