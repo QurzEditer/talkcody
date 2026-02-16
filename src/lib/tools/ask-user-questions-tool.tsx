@@ -7,13 +7,11 @@ import { useUserQuestionStore } from '@/stores/user-question-store';
 import type { ToolExecuteContext, ToolRenderContext } from '@/types/tool';
 import type { AskUserQuestionsOutput } from '@/types/user-question';
 
-// Zod schema for question option
 const QuestionOptionSchema = z.object({
   label: z.string().min(1).describe('The label/text for this option'),
   description: z.string().min(1).describe('Description of what this option means'),
 });
 
-// Zod schema for a single question
 const QuestionSchema = z.object({
   id: z.string().min(1).describe('Unique identifier for the question'),
   question: z.string().min(1).describe('The question text to ask the user'),
@@ -30,14 +28,10 @@ const QuestionSchema = z.object({
   multiSelect: z.boolean().describe('Whether to allow multiple selections'),
 });
 
-// Input schema for the tool
 const inputSchema = z.strictObject({
   questions: z.array(QuestionSchema).min(1).max(4).describe('1-4 questions to ask the user'),
 });
 
-/**
- * Execute function that pauses and waits for user input
- */
 async function executeAskUserQuestions(
   params: z.infer<typeof inputSchema>,
   context?: ToolExecuteContext
