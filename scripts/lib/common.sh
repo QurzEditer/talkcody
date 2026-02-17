@@ -140,7 +140,8 @@ sign_dmg() {
 notarytool_get_field() {
     local output="$1"
     local field="$2"
-    echo "$output" | sed -n "s/^[[:space:]]*${field}:[[:space:]]*//p" | head -n 1
+    # Match patterns like "id: xxx" or "status: xxx" with flexible whitespace
+    echo "$output" | grep -E "^[[:space:]]*${field}:" | head -n 1 | sed "s/^[[:space:]]*${field}:[[:space:]]*//"
 }
 
 # Print standard invalid response guidance
@@ -166,16 +167,21 @@ print_notarization_invalid() {
 # Args: $1 = submission id
 wait_for_notarization() {
     local submission_id="$1"
-    local poll_interval="${NOTARIZE_POLL_INTERVAL:-60}"
+    local poll_interval="${NOTARIZE_POLL_INTERVAL:-30}"
+    local max_wait_time="${NOTARIZE_MAX_WAIT:-7200}"  # Default 2 hours
+    local elapsed_time=0
 
     echo "Waiting for notarization to complete (polling every ${poll_interval}s)..."
+    echo "Maximum wait time: ${max_wait_time}s"
+    echo ""
 
-    while true; do
+    while [ $elapsed_time -lt $max_wait_time ]; do
         local info_output
         if ! info_output=$(xcrun notarytool info "$submission_id" --keychain-profile "talkcody-notary" 2>&1); then
             echo -e "${YELLOW}Warning${NC} Failed to fetch status, retrying in ${poll_interval}s"
             echo "$info_output"
             sleep "$poll_interval"
+            elapsed_time=$((elapsed_time + poll_interval))
             continue
         fi
 
@@ -186,22 +192,43 @@ wait_for_notarization() {
             echo -e "${YELLOW}Warning${NC} Unable to parse status, retrying in ${poll_interval}s"
             echo "$info_output"
             sleep "$poll_interval"
+            elapsed_time=$((elapsed_time + poll_interval))
             continue
         fi
 
-        echo "  [$(date +"%H:%M:%S")] status: $status"
+        echo "  [$(date +"%H:%M:%S")] Status: $status (elapsed: ${elapsed_time}s)"
 
         if [ "$status" = "Accepted" ]; then
+            echo ""
+            echo -e "${GREEN}✓${NC} Notarization accepted!"
             return 0
         fi
 
         if [ "$status" = "Invalid" ]; then
+            echo ""
             print_notarization_invalid "$submission_id"
             return 1
         fi
 
+        if [ "$status" = "In Progress" ]; then
+            echo "  Notarization in progress, continuing to wait..."
+            sleep "$poll_interval"
+            elapsed_time=$((elapsed_time + poll_interval))
+            continue
+        fi
+
+        # Handle other statuses (e.g., "Timeout", "Rejected")
+        echo -e "${YELLOW}Warning${NC} Unexpected status: $status"
+        echo "Continuing to wait..."
         sleep "$poll_interval"
+        elapsed_time=$((elapsed_time + poll_interval))
     done
+
+    echo -e "${RED}Error: Notarization timeout after ${max_wait_time}s${NC}"
+    echo "Submission ID: $submission_id"
+    echo "Check status manually with:"
+    echo "xcrun notarytool info $submission_id --keychain-profile \"talkcody-notary\""
+    return 1
 }
 
 # Notarize a DMG file
@@ -218,42 +245,34 @@ notarize_dmg() {
     echo "  This may take 2-15 minutes, please wait..."
     echo ""
 
-    # Submit and wait for completion
-    local notarize_output
-    echo "  Submitting and waiting for notarization (this may take 2-15 minutes)..."
-    if ! notarize_output=$(xcrun notarytool submit \
+    # Submit without --wait, we'll poll manually
+    local submit_output
+    echo "  Submitting to Apple notary service..."
+    if ! submit_output=$(xcrun notarytool submit \
         --keychain-profile "talkcody-notary" \
-        --wait \
         "$dmg_file" 2>&1); then
         echo -e "${RED}Error: Notarization submission failed${NC}"
-        echo "$notarize_output"
+        echo "$submit_output"
         return 1
     fi
 
-    echo "$notarize_output"
+    echo "$submit_output"
     echo ""
 
     local submission_id
-    submission_id=$(notarytool_get_field "$notarize_output" "id")
+    submission_id=$(notarytool_get_field "$submit_output" "id")
 
-    local status
-    status=$(notarytool_get_field "$notarize_output" "status")
-
-    if [ "$status" = "Accepted" ]; then
-        echo -e "${GREEN}OK${NC} Notarization successful!"
-    elif [ "$status" = "Invalid" ]; then
-        print_notarization_invalid "$submission_id"
+    if [ -z "$submission_id" ]; then
+        echo -e "${RED}Error: Could not extract submission ID${NC}"
+        echo "$submit_output"
         return 1
-    elif [ -n "$submission_id" ]; then
-        if ! wait_for_notarization "$submission_id"; then
-            return 1
-        fi
-        echo -e "${GREEN}OK${NC} Notarization successful!"
-    else
-        echo -e "${RED}Error: Notarization submission failed${NC}"
-        echo ""
-        echo "View detailed log:"
-        echo "xcrun notarytool history --keychain-profile \"talkcody-notary\""
+    fi
+
+    echo "Submission ID: $submission_id"
+    echo ""
+
+    # Wait for notarization to complete
+    if ! wait_for_notarization "$submission_id"; then
         return 1
     fi
 
