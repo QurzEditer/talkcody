@@ -20,7 +20,7 @@ use crate::storage::models::{Message, MessageContent, MessageRole, SessionStatus
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChatRequest {
-    /// Model identifier (e.g., "claude-sonnet-4-20250514")
+    /// Model identifier (e.g., "MiniMax-M2.5")
     pub model: Option<String>,
     /// Messages array
     pub messages: Vec<ChatMessage>,
@@ -254,7 +254,7 @@ pub async fn chat(
         workspace,
     };
 
-    // Subscribe to broadcast events for this session
+    // Subscribe to broadcast events BEFORE starting the task to avoid race condition
     let mut rx = state.event_broadcast.subscribe();
 
     // Start the task
@@ -265,10 +265,11 @@ pub async fn chat(
         ))
     })?;
 
-    // Create SSE stream using a manual stream implementation
+    // Create SSE stream using the already-subscribed receiver
     let session_id_clone = session_id.clone();
     let stream = async_stream::stream! {
-        let mut rx = state.event_broadcast.subscribe();
+        // Move the receiver into the stream to avoid missing early events
+        let mut rx = rx;
         loop {
             match rx.recv().await {
                 Ok(event) => {

@@ -140,7 +140,7 @@ impl AgentLoop {
             model: ctx
                 .model
                 .clone()
-                .unwrap_or_else(|| "claude-sonnet-4".to_string()),
+                .unwrap_or_else(|| "MiniMax-M2.5".to_string()),
             messages: llm_messages,
             tools,
             stream: Some(true),
