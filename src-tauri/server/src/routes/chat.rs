@@ -333,10 +333,6 @@ pub async fn chat(
 
     // Create SSE stream using the already-subscribed receiver
     let session_id_clone = session_id.clone();
-    log::debug!(
-        "[CHAT] Creating SSE stream for session: {}",
-        session_id_clone
-    );
 
     let stream = async_stream::stream! {
         // Move the receiver into the stream to avoid missing early events
@@ -348,7 +344,6 @@ pub async fn chat(
             match rx.recv().await {
                 Ok(event) => {
                     event_count += 1;
-                    log::debug!("[CHAT] Received event #{}: {:?}", event_count, std::mem::discriminant(&event));
                     // Filter events for this session
                     let session_matches = match &event {
                         RuntimeEvent::Token { session_id: s, .. } => s == &session_id_clone,
@@ -366,7 +361,6 @@ pub async fn chat(
                     };
 
                     if !session_matches {
-                        log::trace!("[CHAT] Event #{} filtered out (session mismatch)", event_count);
                         continue;
                     }
                     log::debug!("[CHAT] Event #{} matches session {}, converting to SSE", event_count, session_id_clone);

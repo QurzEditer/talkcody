@@ -164,7 +164,7 @@ impl CoreRuntime {
         }
 
         // Spawn task execution
-        let runtime_clone = self.clone_for_task();
+        let runtime_clone = self.clone();
         let event_sender = self.event_sender.clone();
 
         tokio::spawn(async move {
@@ -431,6 +431,7 @@ impl CoreRuntime {
         });
 
         if let Some(err) = error {
+            log::error!("[Runtime] Task {} failed: {}", task.id, err);
             let _ = event_sender.send(RuntimeEvent::Error {
                 task_id: Some(task.id.clone()),
                 session_id: Some(task.session_id.clone()),
@@ -443,35 +444,6 @@ impl CoreRuntime {
     fn find_session_for_task(&self, input: &TaskInput) -> Option<SessionId> {
         // If session_id is explicitly provided in input, use that
         Some(input.session_id.clone())
-    }
-
-    /// Clone runtime state for task execution
-    fn clone_for_task(&self) -> RuntimeTaskContext {
-        RuntimeTaskContext {
-            session_manager: self.session_manager.clone(),
-            tool_registry: self.tool_registry.clone(),
-        }
-    }
-}
-
-/// Context passed to task execution (lighter weight than full runtime)
-#[derive(Clone)]
-struct RuntimeTaskContext {
-    session_manager: Arc<SessionManager>,
-    tool_registry: Arc<ToolRegistry>,
-}
-
-impl RuntimeTaskContext {
-    async fn run_task(
-        &self,
-        _task: RuntimeTask,
-        _input: TaskInput,
-        _task_state: Arc<RwLock<RuntimeTaskState>>,
-        _action_rx: mpsc::UnboundedReceiver<TaskAction>,
-        _event_sender: EventSender,
-    ) {
-        // This is called from the spawned task - actual implementation is in CoreRuntime
-        // This method exists for type compatibility
     }
 }
 
