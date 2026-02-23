@@ -5,20 +5,30 @@ rust_files_changed=false
 if git diff --cached --name-only | grep -E '\.rs$' > /dev/null; then
   rust_files_changed=true
   echo "Rust files detected, running cargo fmt..."
-  
+
   # Run cargo fmt on the entire project (safer than targeting specific files)
   cd src-tauri
   cargo fmt
   cargo_exit_code=$?
-  cd ..
-  
-  # Only stage the Rust files that were changed by cargo fmt
-  git add -u src-tauri/
-  
+
   if [ $cargo_exit_code -ne 0 ]; then
     echo "Error: cargo fmt failed"
     exit $cargo_exit_code
   fi
+
+  # Run cargo clippy to check for warnings (treat warnings as errors)
+  echo "Running cargo clippy to check for warnings..."
+  cargo clippy -- -D warnings
+  clippy_exit_code=$?
+  cd ..
+
+  if [ $clippy_exit_code -ne 0 ]; then
+    echo "Error: cargo clippy found warnings or errors"
+    exit $clippy_exit_code
+  fi
+
+  # Only stage the Rust files that were changed by cargo fmt
+  git add -u src-tauri/
 fi
 
 # Get list of currently staged files before running Biome
